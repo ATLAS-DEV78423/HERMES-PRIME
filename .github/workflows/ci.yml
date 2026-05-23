@@ -24,7 +24,8 @@ jobs:
         python -m pip --version || true
         echo "=== Installing dev deps (verbose) ==="
         pip install --upgrade pip -v
-        pip install -e .[dev] -v
+        python -m pip install -e ".[dev]" -v || python -m pip install -e "." -v
+        python -m pip install pytest ruff mypy bandit -v || true
     - name: Lint with ruff
       run: |
         ruff check .
@@ -48,8 +49,8 @@ jobs:
     - name: Install dependencies
       run: |
         pip install --upgrade pip
-        pip install -e ".[dev]"
-        pip install pytest
+        python -m pip install -e ".[dev]" || python -m pip install -e "."
+        python -m pip install pytest -v
     - name: Run tests
       run: pytest tests/ -v
 

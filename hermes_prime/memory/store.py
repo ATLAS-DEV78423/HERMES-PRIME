@@ -10,6 +10,7 @@ from hermes_prime.contracts import (
     TrustState,
     trust_transition_allowed,
 )
+from hermes_prime.memory.graph import KnowledgeGraph
 from hermes_prime.memory.records import MemoryRecord, MemoryType, record_from_claim
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
@@ -44,9 +45,11 @@ class MemoryStore:
         depth_policy: DepthPolicy | None = None,
         provenance_linker: ProvenanceLinker | None = None,
         signer: HMACSigner | None = None,
+        knowledge_graph: KnowledgeGraph | None = None,
     ) -> None:
         self.backend = backend or SQLiteMemoryBackend(".hermes-prime/memory.db")
         self.depth_policy = depth_policy or DepthPolicy()
+        self.knowledge_graph = knowledge_graph or KnowledgeGraph()
         self.provenance_linker = provenance_linker or ProvenanceLinker(
             signer=signer or HMACSigner(
                 identity="atlas:memory-store",
@@ -65,6 +68,7 @@ class MemoryStore:
         intent_root: IntentRoot,
         epistemic_confidence: float = 0.5,
         source_trust: str = "observed",
+        causal_parent: str | None = None,
     ) -> MemoryStoreResult:
         current_for_intent = len([
             c for c in self.backend.list_all()
@@ -84,9 +88,19 @@ class MemoryStore:
             epistemic_confidence=epistemic_confidence,
             source_trust=source_trust,
         )
+
+        if causal_parent:
+            self.knowledge_graph.add_edge(claim.fact_id, causal_parent)
+            lineage = self.knowledge_graph.get_lineage(claim.fact_id)
+            claim.source["lineage"] = lineage
+            claim.source["causal_parent"] = causal_parent
+        else:
+            lineage = []
+            causal_parent = None
+
         attestation = self.provenance_linker.attest_memory(claim, intent_root)
         self.backend.store(claim)
-        record = record_from_claim(claim, memory_type=MemoryType.EPISODIC)
+        record = record_from_claim(claim, memory_type=MemoryType.EPISODIC, lineage=lineage, causal_parent=causal_parent)
         return MemoryStoreResult(
             success=True,
             fact_id=claim.fact_id,
@@ -151,6 +165,15 @@ class MemoryStore:
             claim.tier = MemoryTier.AUTHORITATIVE
         self.backend.store(claim)
         return MemoryStoreResult(success=True, fact_id=fact_id, claim=claim)
+
+    def get_lineage(self, fact_id: str) -> list[str]:
+        return self.knowledge_graph.get_lineage(fact_id)
+
+    def get_descendants(self, fact_id: str) -> list[str]:
+        return self.knowledge_graph.get_descendants(fact_id)
+
+    def get_path(self, from_id: str, to_id: str) -> list[str] | None:
+        return self.knowledge_graph.get_path(from_id, to_id)
 
     def gc(self, before_timestamp: str | None = None) -> MemoryStoreResult:
         if before_timestamp is None:

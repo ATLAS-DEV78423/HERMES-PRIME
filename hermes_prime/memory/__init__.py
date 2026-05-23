@@ -8,6 +8,7 @@ from hermes_prime.memory.depth import DepthPolicy
 from hermes_prime.memory.records import MemoryRecord, MemoryType, ValidationStatus, record_from_claim, claim_from_record
 from hermes_prime.memory.compiler import ContextCompiler, ContextQuery, ContextResult, TrustFilter, ChainCompressor
 from hermes_prime.memory.governor import ContradictionDetector, ContradictionResult, MemoryGovernor
+from hermes_prime.memory.consolidation import ConsolidationRequest, ConsolidationResult, PatternResult, ReflectiveConsolidator
 
 __all__ = [
     "MemoryBackend",
@@ -29,4 +30,8 @@ __all__ = [
     "ContradictionDetector",
     "ContradictionResult",
     "MemoryGovernor",
+    "ConsolidationRequest",
+    "ConsolidationResult",
+    "PatternResult",
+    "ReflectiveConsolidator",
 ]

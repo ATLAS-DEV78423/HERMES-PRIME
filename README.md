@@ -30,10 +30,10 @@ HERMES-PRIME is built on Python 3.10+ and relies on native binary fallbacks when
 
 ### One-Liner Install
 
-For convenience, you can install HERMES-PRIME securely using our setup script:
+For convenience, you can install HERMES-PRIME securely using our setup script (pinned to the v0.2.1 release):
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/ATLAS-DEV78423/HERMES-PRIME/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/ATLAS-DEV78423/HERMES-PRIME/v0.2.1/install.sh | bash
 ```
 
 ### Manual Quick Setup
@@ -107,3 +107,25 @@ HERMES-PRIME acts as the deterministic governance orchestrator across several po
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Developer Quickstart
+
+Install dev tools and run tests locally:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -U pip
+pip install -r requirements-dev.txt
+pip install -e .
+ruff check .
+pytest -q
+```
+
+Install pre-commit hooks:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```

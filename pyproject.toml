@@ -56,8 +56,8 @@ dev = [
     "mypy>=1.0.0",
 ]
 all = [
-    "hermes-prime[llm,memory,tui,vault,dev]",
-]
+    # Combined extras removed to avoid self-referential packaging issues.
+    # If desired, re-add explicit package extras here instead of a self-reference.
 
 [project.scripts]
 hermes-prime = "hermes_prime.cli:main"

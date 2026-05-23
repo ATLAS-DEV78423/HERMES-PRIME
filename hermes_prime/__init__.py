@@ -8,7 +8,10 @@ from .contracts import (
     FabricPatternMatch,
     IntentRoot,
     LifecycleState,
+    MemoryAttestation,
     MemoryClaim,
+    MemoryOperation,
+    MemoryTier,
     MinerAttestation,
     PatternClassification,
     ProvenanceAttestation,
@@ -16,4 +19,5 @@ from .contracts import (
     SentinelDecision,
     TrustState,
 )
+from .memory import AtlasBackend, DepthPolicy, MemoryBackend, MemorySearchResult, MemoryStore, ProvenanceLinker, SQLiteMemoryBackend
 

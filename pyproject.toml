@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-prime"
-version = "0.2.0"
+version = "0.2.1"
 description = "Sovereign, deterministic governance engine for autonomous AI operations"
 readme = "README.md"
 license = {text = "MIT"}

@@ -1,0 +1,54 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "PyPI environment (pypi or testpypi)"
+        required: true
+        default: "testpypi"
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'release' && 'pypi' || inputs.environment }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install build tools
+      run: |
+        pip install --upgrade pip
+        pip install build
+
+    - name: Build wheel and sdist
+      run: python -m build
+
+    - name: Verify dist
+      run: |
+        pip install dist/*.whl
+        hermes-prime --help
+        hermes-prime doctor
+
+    - name: Publish to PyPI (trusted publishing)
+      if: github.event_name == 'release'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist/
+
+    - name: Publish to TestPyPI (manual trigger)
+      if: github.event_name == 'workflow_dispatch'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        packages-dir: dist/

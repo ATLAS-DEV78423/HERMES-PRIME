@@ -4,6 +4,7 @@ import data.sentinel.capability
 import data.sentinel.execution
 import data.sentinel.filesystem
 import data.sentinel.injection
+import data.sentinel.memory
 
 allow {
   input.action_type == "filesystem.read"
@@ -29,6 +30,25 @@ allow {
 allow {
   input.action_type == "execution.command"
   execution.allow
+  capability.allow
+  not injection.blocked
+}
+
+allow {
+  input.action_type == "memory.write"
+  memory.allow
+  capability.allow
+  not injection.blocked
+}
+
+allow {
+  input.action_type == "agent.spawn"
+  capability.allow
+  not injection.blocked
+}
+
+allow {
+  input.action_type == "agent.kill"
   capability.allow
   not injection.blocked
 }

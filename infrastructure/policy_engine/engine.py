@@ -9,6 +9,7 @@ from hermes_prime.contracts import (
     ActionType,
     CapabilityToken,
     IntentRoot,
+    MemoryTier,
     RiskTier,
     SentinelDecision,
 )
@@ -29,8 +30,10 @@ class PolicyContext:
     workspace_root: str
     max_dispatches_per_turn: int = 12
     max_tokens_per_turn: int = 25_000
-    max_chain_depth: int = 1
+    max_chain_depth: int = 5
     max_context_bytes: int = 1_000_000
+    max_memory_claims: int = 10000
+    max_memory_claim_length: int = 10000
 
 
 @dataclass
@@ -226,7 +229,10 @@ class PolicyEngine:
         if action.action_type == ActionType.MINER_DISPATCH:
             return rule, None
         if action.action_type == ActionType.MEMORY_WRITE:
-            return rule, "memory_writes_blocked_until_provenance_layer"
+            tier = action.parameters.get("tier", "quarantine")
+            if tier == MemoryTier.QUARANTINE.value:
+                return rule, None
+            return rule, "authoritative_memory_writes_require_promotion"
         if action.action_type == ActionType.CAPABILITY_REQUEST:
             return rule, None
         return rule, "unknown_action_type"
@@ -255,6 +261,10 @@ class PolicyEngine:
             return "token_budget_exceeded"
         if len(action.scope.encode("utf-8")) > self.context.max_context_bytes:
             return "scope_payload_too_large"
+        if action.action_type == ActionType.MEMORY_WRITE:
+            claim_text = action.parameters.get("claim", "")
+            if len(claim_text) > self.context.max_memory_claim_length:
+                return "memory_claim_exceeds_max_length"
         return None
 
     def _assign_risk_tier(self, action: ActionProposal) -> RiskTier:
@@ -272,6 +282,10 @@ class PolicyEngine:
             return RiskTier.T2
         if action.action_type == ActionType.EXECUTION_COMMAND:
             return RiskTier.T2
+        if action.action_type == ActionType.AGENT_SPAWN:
+            return RiskTier.T3
+        if action.action_type == ActionType.AGENT_KILL:
+            return RiskTier.T3
         return action.risk_tier
 
     def _deny(

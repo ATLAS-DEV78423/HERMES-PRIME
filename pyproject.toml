@@ -4,15 +4,59 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-prime"
-version = "0.1.0"
-description = "Hermes Prime governed cognitive infrastructure"
+version = "0.2.0"
+description = "Sovereign, deterministic governance engine for autonomous AI operations"
+readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10"
+authors = [
+    {name = "ATLAS-DEV78423", email = "atlas@hermes-prime.dev"},
+]
+keywords = ["governance", "ai-safety", "policy-engine", "opa", "autonomous-agents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "Topic :: System :: Monitoring",
+]
 dependencies = [
     "tree_sitter>=0.25.0",
     "tree_sitter_python>=0.25.0",
     "tree_sitter_javascript>=0.25.0",
     "tree_sitter_typescript>=0.23.0",
     "wasmtime>=44.0.0",
+    "pydantic>=2.0.0",
+    "requests>=2.31.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ATLAS-DEV78423/HERMES-PRIME"
+Repository = "https://github.com/ATLAS-DEV78423/HERMES-PRIME"
+Documentation = "https://github.com/ATLAS-DEV78423/HERMES-PRIME#readme"
+Issues = "https://github.com/ATLAS-DEV78423/HERMES-PRIME/issues"
+
+[project.optional-dependencies]
+llm = ["ollama>=0.1.0"]
+memory = ["chromadb>=0.4.0"]
+tui = ["textual>=0.40.0", "rich>=13.0.0"]
+vault = ["hvac>=2.0.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+all = [
+    "hermes-prime[llm,memory,tui,vault,dev]",
 ]
 
 [project.scripts]
@@ -27,3 +71,21 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["hermes_prime*", "core*", "infrastructure*", "miners*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+ignore_missing_imports = true

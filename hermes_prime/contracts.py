@@ -24,6 +24,8 @@ class ActionType(str, Enum):
     EXECUTION_COMMAND = "execution.command"
     MINER_DISPATCH = "miner.dispatch"
     MEMORY_WRITE = "memory.write"
+    AGENT_SPAWN = "agent.spawn"
+    AGENT_KILL = "agent.kill"
     CAPABILITY_REQUEST = "capability.request"
 
 
@@ -65,6 +67,15 @@ class LifecycleState(str, Enum):
 class MemoryTier(str, Enum):
     QUARANTINE = "quarantine"
     AUTHORITATIVE = "authoritative"
+
+
+class MemoryOperation(str, Enum):
+    WRITE = "memory.write"
+    READ = "memory.read"
+    LIST = "memory.list"
+    RECALL = "memory.recall"
+    REVOKE = "memory.revoke"
+    GC = "memory.gc"
 
 
 def _require_urn_uuid(value: str, field_name: str) -> None:
@@ -375,6 +386,70 @@ class ProvenanceAttestation:
 
 
 @dataclass
+class InferenceAttestation:
+    """Attestation of an LLM inference call for auditability."""
+    attestation_id: str
+    model: str
+    timestamp: str
+    request_hash: str  # Hash of the full request
+    response_hash: str  # Hash of the response
+    tokens_used: int
+    latency_ms: float
+    finish_reason: str
+    prompt_hash: str  # Hash of system + user prompt
+    signature: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.attestation_id:
+            raise ValueError("attestation_id must not be empty")
+        _require_urn_uuid(self.attestation_id, "attestation_id")
+        _ensure_future_iso(self.timestamp, "timestamp")
+        if not self.signature:
+            raise ValueError("signature must not be empty")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "attestation_id": self.attestation_id,
+            "model": self.model,
+            "timestamp": self.timestamp,
+            "request_hash": self.request_hash,
+            "response_hash": self.response_hash,
+            "tokens_used": self.tokens_used,
+            "latency_ms": self.latency_ms,
+            "finish_reason": self.finish_reason,
+            "prompt_hash": self.prompt_hash,
+            "signature": self.signature,
+        }
+
+
+@dataclass
+class MemoryAttestation:
+    attestation_id: str
+    fact_id: str
+    intent_root: str
+    claim_hash: str
+    source: str
+    generated_at: str
+    signature: str
+
+    def __post_init__(self) -> None:
+        _require_urn_uuid(self.attestation_id, "attestation_id")
+        _require_urn_uuid(self.fact_id, "fact_id")
+        _require_urn_uuid(self.intent_root, "intent_root")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "attestation_id": self.attestation_id,
+            "fact_id": self.fact_id,
+            "intent_root": self.intent_root,
+            "claim_hash": self.claim_hash,
+            "source": self.source,
+            "generated_at": self.generated_at,
+            "signature": self.signature,
+        }
+
+
+@dataclass
 class AuditTrace:
     trace_id: str
     trace_type: str
@@ -515,6 +590,98 @@ class FabricAugmentation:
             "authority": self.authority,
             "generated_at": self.generated_at,
             "pattern_hashes": dict(self.pattern_hashes),
+        }
+
+
+class AgentStatus(str, Enum):
+    IDLE = "idle"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    KILLED = "killed"
+    PENDING = "pending"
+
+
+@dataclass
+class AgentNode:
+    agent_id: str
+    parent_id: str | None
+    intent_root: str
+    capability_scope: str
+    capability_token: str | None
+    spawned_by: str | None
+    spawned_at: str
+    completed_at: str | None
+    status: AgentStatus
+    depth: int
+    task_description: str
+    result: dict[str, Any] | None
+    attestation: "AgentSpawnAttestation | None"
+
+    def __post_init__(self) -> None:
+        _require_urn_uuid(self.agent_id, "agent_id")
+        if self.parent_id is not None:
+            _require_urn_uuid(self.parent_id, "parent_id")
+        _require_urn_uuid(self.intent_root, "intent_root")
+        _ensure_future_iso(self.spawned_at, "spawned_at")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "agent_id": self.agent_id,
+            "parent_id": self.parent_id,
+            "intent_root": self.intent_root,
+            "capability_scope": self.capability_scope,
+            "capability_token": self.capability_token,
+            "spawned_by": self.spawned_by,
+            "spawned_at": self.spawned_at,
+            "completed_at": self.completed_at,
+            "status": self.status.value,
+            "depth": self.depth,
+            "task_description": self.task_description,
+            "result": self.result,
+            "attestation": self.attestation.to_dict() if self.attestation else None,
+        }
+
+
+@dataclass
+class AgentSpawnRequest:
+    task_description: str
+    scope: str
+    risk_tier_ceiling: RiskTier
+    parent_agent_id: str | None
+    max_depth: int
+    capability_actions: list[ActionType]
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class AgentSpawnAttestation:
+    attestation_id: str
+    agent_id: str
+    spawned_by: str
+    intent_root: str
+    capability_token_id: str
+    spawned_at: str
+    policy_hash: str
+    signature: str
+
+    def __post_init__(self) -> None:
+        _require_urn_uuid(self.attestation_id, "attestation_id")
+        _require_urn_uuid(self.agent_id, "agent_id")
+        _require_urn_uuid(self.spawned_by, "spawned_by")
+        _require_urn_uuid(self.intent_root, "intent_root")
+        _ensure_future_iso(self.spawned_at, "spawned_at")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "attestation_id": self.attestation_id,
+            "agent_id": self.agent_id,
+            "spawned_by": self.spawned_by,
+            "intent_root": self.intent_root,
+            "capability_token_id": self.capability_token_id,
+            "spawned_at": self.spawned_at,
+            "policy_hash": self.policy_hash,
+            "signature": self.signature,
         }
 
 

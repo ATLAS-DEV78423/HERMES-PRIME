@@ -103,9 +103,9 @@ class SQLiteMemoryBackend(MemoryBackend):
         return int(row["cnt"])
 
     def gc(self, before_timestamp: str) -> int:
-        self.conn.execute(
+        cursor = self.conn.execute(
             "DELETE FROM memory_claims WHERE created_at < ?",
             (before_timestamp,),
         )
         self.conn.commit()
-        return self.conn.total_changes
+        return cursor.rowcount

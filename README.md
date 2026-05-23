@@ -86,5 +86,16 @@ The `hermes/` directory contains the complete doctrine, invariants, gates, and a
 * [CLI_IDENTITY.md](hermes/CLI_IDENTITY.md) - The visual and operational tone guidelines.
 * [SCHEMA_REGISTRY.md](hermes/SCHEMA_REGISTRY.md) - The strict boundary types.
 
+## Upstream Infrastructure & Submodules
+
+HERMES-PRIME acts as the deterministic governance orchestrator across several powerful upstream primitives. The following external repositories are utilized either as core dependencies, submodules, or reference architectures (tracked via our `WORKSPACE_MANIFEST.yaml`):
+
+* **Policy & Governance:** [Open Policy Agent (OPA)](https://github.com/open-policy-agent/opa)
+* **File Extraction & Mining:** [Ripgrep](https://github.com/BurntSushi/ripgrep) and [Tree-sitter](https://github.com/tree-sitter/tree-sitter)
+* **Trust & Cryptography:** [Sigstore](https://github.com/sigstore/sigstore) and [HashiCorp Vault](https://github.com/hashicorp/vault)
+* **Orchestration references:** [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) and [Fabric](https://github.com/danielmiessler/fabric)
+
+*Note: These external systems are tracked as Git submodules (or references) to avoid bloating the HERMES-PRIME repository with duplicate upstream code.*
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

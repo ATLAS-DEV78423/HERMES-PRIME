@@ -55,10 +55,11 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
-all = [
-    # Combined extras removed to avoid self-referential packaging issues.
-    # If desired, re-add explicit package extras here instead of a self-reference.
-
+[# NOTE]
+# The `all` extra was intentionally removed to avoid a self-referential
+# packaging loop. If you want an explicit combined extras list, add a
+# non-self-referential array here, for example:
+# all = ["llm", "memory", "tui", "vault", "dev"]
 [project.scripts]
 hermes-prime = "hermes_prime.cli:main"
 sentinel = "hermes_prime.cli:main"

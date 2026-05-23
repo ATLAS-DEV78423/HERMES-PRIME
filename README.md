@@ -28,7 +28,15 @@ HERMES-PRIME is built on Python 3.10+ and relies on native binary fallbacks when
 * (Optional) Local `opa` binary for optimized policy enforcement
 * (Optional) `rg` (ripgrep) installed on system path for accelerated file mining
 
-### Quick Setup
+### One-Liner Install
+
+For convenience, you can install HERMES-PRIME securely using our setup script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/ATLAS-DEV78423/HERMES-PRIME/main/install.sh | bash
+```
+
+### Manual Quick Setup
 
 1. **Clone the repository:**
    ```bash

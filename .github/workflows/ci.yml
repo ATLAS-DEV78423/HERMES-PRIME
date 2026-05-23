@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: 'false'
     - uses: actions/setup-python@v5
       with:
         python-version: "3.12"
@@ -24,9 +26,10 @@ jobs:
         pip install --upgrade pip -v
         pip install -e .[dev] -v
     - name: Lint with ruff
-      run: ruff check .
+      run: |
+        ruff check .
+        ruff check . --select I
     - name: Type check with mypy
-      continue-on-error: true
       run: mypy hermes_prime/ infrastructure/
 
   test:
@@ -37,13 +40,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: 'false'
     - uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         pip install --upgrade pip
-        pip install -e "."
+        pip install -e ".[dev]"
         pip install pytest
     - name: Run tests
       run: pytest tests/ -v

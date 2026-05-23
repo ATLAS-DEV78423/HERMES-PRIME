@@ -1,0 +1,168 @@
+workspace:
+  name: hermes-prime
+  purpose: governed ai-agent infrastructure with deterministic trust boundaries
+
+repos:
+  - name: hermes-agent
+    upstream: https://github.com/NousResearch/hermes-agent.git
+    class: core
+    role: primary orchestration substrate
+    required_for_full_system: true
+    notes:
+      - subagents
+      - skills
+      - memory
+      - sandboxing
+      - tooling
+      - scheduling
+
+  - name: ATLAS-AI
+    upstream: https://github.com/ATLAS-DEV78423/ATLAS-AI.git
+    class: core
+    role: memory and belief infrastructure
+    required_for_full_system: true
+
+  - name: SENTINAL
+    upstream: https://github.com/ATLAS-DEV78423/SENTINAL.git
+    class: core
+    role: policy and governance layer
+    required_for_full_system: true
+
+  - name: fabric
+    upstream: https://github.com/danielmiessler/fabric.git
+    class: reference
+    role: pattern and reasoning infrastructure
+    required_for_full_system: false
+
+  - name: tree-sitter
+    upstream: https://github.com/tree-sitter/tree-sitter.git
+    class: reference
+    role: ast-aware retrieval primitive
+    required_for_full_system: false
+
+  - name: ripgrep
+    upstream: https://github.com/BurntSushi/ripgrep.git
+    class: reference
+    role: deterministic filesystem retrieval primitive
+    required_for_full_system: false
+
+  - name: llama_index
+    upstream: https://github.com/run-llama/llama_index.git
+    class: reference
+    role: structured retrieval and indexing ideas
+    required_for_full_system: false
+
+  - name: cody
+    upstream: https://github.com/sourcegraph/cody.git
+    class: reference
+    role: semantic navigation reference
+    required_for_full_system: false
+
+  - name: opa
+    upstream: https://github.com/open-policy-agent/opa.git
+    class: reference
+    role: policy engine reference
+    required_for_full_system: false
+
+  - name: vault
+    upstream: https://github.com/hashicorp/vault.git
+    class: reference
+    role: secret and capability architecture reference
+    required_for_full_system: false
+
+  - name: gitleaks
+    upstream: https://github.com/gitleaks/gitleaks.git
+    class: reference
+    role: secret scanning
+    required_for_full_system: false
+
+  - name: trufflehog
+    upstream: https://github.com/trufflesecurity/trufflehog.git
+    class: reference
+    role: credential leakage detection
+    required_for_full_system: false
+
+  - name: sigstore
+    upstream: https://github.com/sigstore/sigstore.git
+    class: reference
+    role: provenance and signing reference
+    required_for_full_system: false
+
+  - name: in-toto
+    upstream: https://github.com/in-toto/in-toto.git
+    class: reference
+    role: artifact lineage and attestation
+    required_for_full_system: false
+
+  - name: python-tuf
+    upstream: https://github.com/theupdateframework/python-tuf.git
+    class: reference
+    role: trusted update framework reference
+    required_for_full_system: false
+
+  - name: slsa
+    upstream: https://github.com/slsa-framework/slsa.git
+    class: reference
+    role: supply chain provenance reference
+    required_for_full_system: false
+
+  - name: ollama
+    upstream: https://github.com/ollama/ollama.git
+    class: optional
+    role: local model runtime
+    required_for_full_system: false
+
+  - name: vllm
+    upstream: https://github.com/vllm-project/vllm.git
+    class: optional
+    role: local model runtime
+    required_for_full_system: false
+
+  - name: neo4j
+    upstream: https://github.com/neo4j/neo4j.git
+    class: optional
+    role: graph infrastructure reference
+    required_for_full_system: false
+
+  - name: mem0
+    upstream: https://github.com/mem0ai/mem0.git
+    class: optional
+    role: memory subsystem reference
+    required_for_full_system: false
+
+  - name: zep
+    upstream: https://github.com/getzep/zep.git
+    class: optional
+    role: memory subsystem reference
+    required_for_full_system: false
+
+  - name: opendevin
+    upstream: https://github.com/OpenDevin/OpenDevin.git
+    class: reference
+    role: agent system reference
+    required_for_full_system: false
+
+  - name: continue
+    upstream: https://github.com/continuedev/continue.git
+    class: reference
+    role: coding system reference
+    required_for_full_system: false
+
+  - name: aider
+    upstream: https://github.com/Aider-AI/aider.git
+    class: reference
+    role: coding system reference
+    required_for_full_system: false
+
+  - name: langgraph
+    upstream: https://github.com/langchain-ai/langgraph.git
+    class: optional
+    role: orchestration reference
+    required_for_full_system: false
+
+principles:
+  - do not clone everything before deciding the primitives
+  - prefer deterministic components for blocking decisions
+  - keep provenance ahead of memory
+  - treat references as implementation guidance, not architecture authority
+

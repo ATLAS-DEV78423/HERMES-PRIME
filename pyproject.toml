@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-prime"
+version = "0.1.0"
+description = "Hermes Prime governed cognitive infrastructure"
+requires-python = ">=3.10"
+dependencies = [
+    "tree_sitter>=0.25.0",
+    "tree_sitter_python>=0.25.0",
+    "tree_sitter_javascript>=0.25.0",
+    "tree_sitter_typescript>=0.23.0",
+    "wasmtime>=44.0.0",
+]
+
+[project.scripts]
+hermes-prime = "hermes_prime.cli:main"
+sentinel = "hermes_prime.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"infrastructure.policy_engine" = ["policies/*.rego", "schemas/*.json"]
+
+[tool.setuptools.packages.find]
+include = ["hermes_prime*", "core*", "infrastructure*", "miners*"]

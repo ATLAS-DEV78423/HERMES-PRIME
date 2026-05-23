@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Capability Token",
+  "type": "object",
+  "required": ["token_id", "capability", "scope", "actions", "risk_tier_ceiling", "expires_at", "intent_root", "issued_to", "issued_at", "nonce", "signature"],
+  "properties": {
+    "token_id": { "type": "string" },
+    "capability": { "type": "string" },
+    "scope": { "type": "string" },
+    "actions": { "type": "array", "items": { "type": "string" } },
+    "risk_tier_ceiling": { "type": "string" },
+    "expires_at": { "type": "string" },
+    "intent_root": { "type": "string" },
+    "issued_to": { "type": "string" },
+    "issued_at": { "type": "string" },
+    "nonce": { "type": "string" },
+    "signature": { "type": "string" }
+  }
+}
+

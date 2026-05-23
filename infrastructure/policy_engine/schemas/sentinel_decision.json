@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sentinel Decision",
+  "type": "object",
+  "required": ["decision_id", "timestamp", "action_id", "permitted", "audit_written"],
+  "properties": {
+    "decision_id": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "action_id": { "type": "string" },
+    "permitted": { "type": "boolean" },
+    "risk_tier": { "type": ["string", "null"] },
+    "policy_rule": { "type": ["string", "null"] },
+    "blocking_layer": { "type": ["integer", "null"] },
+    "denial_reason": { "type": ["string", "null"] },
+    "advisory_signals": { "type": "array", "items": { "type": "string" } },
+    "consent_required": { "type": ["boolean", "null"] },
+    "audit_written": { "type": "boolean" }
+  }
+}

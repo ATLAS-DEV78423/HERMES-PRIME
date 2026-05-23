@@ -6,6 +6,7 @@ from hermes_prime.memory.store import MemoryStore
 from hermes_prime.memory.provenance import ProvenanceLinker
 from hermes_prime.memory.depth import DepthPolicy
 from hermes_prime.memory.records import MemoryRecord, MemoryType, ValidationStatus, record_from_claim, claim_from_record
+from hermes_prime.memory.compiler import ContextCompiler, ContextQuery, ContextResult, TrustFilter, ChainCompressor
 
 __all__ = [
     "MemoryBackend",
@@ -19,4 +20,9 @@ __all__ = [
     "ValidationStatus",
     "record_from_claim",
     "claim_from_record",
+    "ContextCompiler",
+    "ContextQuery",
+    "ContextResult",
+    "TrustFilter",
+    "ChainCompressor",
 ]

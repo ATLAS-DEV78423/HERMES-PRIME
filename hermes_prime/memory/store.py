@@ -142,7 +142,11 @@ class MemoryStore:
         claim = self.backend.get(fact_id)
         if claim is None:
             return MemoryStoreResult(success=False, error=f"fact {fact_id} not found")
-        current = claim.trust_state if isinstance(claim.trust_state, TrustState) else TrustState(claim.trust_state)
+        current = (
+            claim.trust_state
+            if isinstance(claim.trust_state, TrustState)
+            else TrustState(claim.trust_state)
+        )
         target = target_state if isinstance(target_state, TrustState) else TrustState(target_state)
         if not trust_transition_allowed(current, target):
             return MemoryStoreResult(
@@ -154,7 +158,10 @@ class MemoryStore:
                 success=False,
                 error="contradictory memory claims cannot be promoted",
             )
-        if target in {TrustState.VALIDATED, TrustState.EXECUTABLE} and self.depth_policy.authoritative_only_corroborated:
+        if (
+            target in {TrustState.VALIDATED, TrustState.EXECUTABLE}
+            and self.depth_policy.authoritative_only_corroborated
+        ):
             if claim.epistemic_confidence < 0.8:
                 return MemoryStoreResult(
                     success=False,

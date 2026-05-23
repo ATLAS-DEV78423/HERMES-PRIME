@@ -61,7 +61,11 @@ def build_parser() -> argparse.ArgumentParser:
     g_import_parser.add_argument("--graph-path", default=None, help="Path to graph.json")
 
     doctor_parser = subparsers.add_parser("doctor", help="Check local backend readiness")
-    doctor_parser.add_argument("--strict", action="store_true", help="Exit non-zero if critical backends are missing")
+    doctor_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit non-zero if critical backends are missing",
+    )
 
     subparsers.add_parser("inspect", help="Inspect the Sentinel bundle")
 
@@ -130,7 +134,19 @@ def build_parser() -> argparse.ArgumentParser:
     agents_sub = agents_parser.add_subparsers(dest="agent_command")
 
     agents_list = agents_sub.add_parser("list", help="List all agents")
-    agents_list.add_argument("--status", default=None, choices=["idle","running","completed","failed","killed","pending"], help="Filter by status")
+    agents_list.add_argument(
+        "--status",
+        default=None,
+        choices=[
+            "idle",
+            "running",
+            "completed",
+            "failed",
+            "killed",
+            "pending",
+        ],
+        help="Filter by status",
+    )
 
     agents_spawn = agents_sub.add_parser("spawn", help="Spawn a new sub-agent")
     agents_spawn.add_argument("--task", required=True, help="Task description for the agent")

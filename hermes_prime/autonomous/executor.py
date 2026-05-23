@@ -4,6 +4,8 @@ import json
 from dataclasses import dataclass
 from typing import Any, Optional
 
+import logging
+
 from hermes_prime.autonomous.inference_logger import InferenceLogger, InferenceAttestation
 from hermes_prime.autonomous.proposal_parser import ProposalParser, ProposalParsingError
 from hermes_prime.contracts import (
@@ -19,12 +21,13 @@ from hermes_prime.memory import MemoryStore, DepthPolicy
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.llm.prompt_builder import PromptBuilder
 from hermes_prime.signing import HMACSigner
-from hermes_prime.utils import new_urn_uuid, utc_now_iso, sha256_bytes
+from hermes_prime.utils import new_urn_uuid, utc_now_iso
 from infrastructure.policy_engine.sentinel_service import SentinelService
 from infrastructure.sandboxed_forge.forge import SandboxedForge
 from infrastructure.trust_store import TrustStore
 from infrastructure.vault.capabilities import CapabilityVault
 from pathlib import Path
+from hermes_prime.llm.client import LLMRequest
 
 
 @dataclass
@@ -60,7 +63,7 @@ class AutonomousExecutor:
         self.trust_store = trust_store
         self.forge = forge or SandboxedForge(workspace_root)
         self.workspace_root = Path(workspace_root).resolve()
-        self.signer = signer or HMACSigner()
+        self.signer = signer or HMACSigner(identity="hermes-autonomous", secret=b"default-dev-secret")
         self.prompt_builder = PromptBuilder(str(self.workspace_root))
         self.memory_store = MemoryStore(
             backend=SQLiteMemoryBackend(self.workspace_root / ".hermes-prime" / "memory.db"),
@@ -86,11 +89,29 @@ class AutonomousExecutor:
             )
             self.sentinel.register_intent_root(intent)
 
-            # Step 2: Call LLM
+            # Step 2: Gather relevant memory context and build prompt
+            try:
+                recall_result = self.memory_store.recall(task_prompt, limit=5)
+                recent_actions = [
+                    {
+                        "fact_id": r.fact_id,
+                        "claim": r.claim,
+                        "source": r.source,
+                        "action_type": "memory.write",
+                        "scope": r.claim,
+                    }
+                    for r in (recall_result.results or [])
+                ]
+            except Exception as mem_e:
+                logging.warning("memory recall failed: %s", mem_e)
+                recent_actions = None
+
             messages = self.prompt_builder.build_messages(
                 task=task_prompt,
                 file_context=file_context,
+                recent_actions=recent_actions,
             )
+
             llm_request = LLMRequest(
                 model=model,
                 messages=messages,
@@ -100,7 +121,7 @@ class AutonomousExecutor:
             llm_response = self.llm_client.infer(llm_request)
 
             # Create signed inference attestation
-            inference_signature = self.signer.sign(llm_response.message_content)
+            inference_signature = self.signer.sign(llm_response.message_content.encode("utf-8"))
             inference_attestation = InferenceLogger.create_attestation(
                 llm_request,
                 llm_response,
@@ -185,7 +206,7 @@ class AutonomousExecutor:
 
             # Store execution metadata as a memory claim for future reference
             try:
-                self.memory_store.write(
+                mem_result = self.memory_store.write(
                     claim_text=f"Autonomous execution: {task_prompt} → {proposal.action_type.value} → {'SUCCESS' if evaluation.decision.permitted else 'REJECTED'}",
                     source={
                         "component": "autonomous_executor",
@@ -197,9 +218,15 @@ class AutonomousExecutor:
                     epistemic_confidence=0.9 if evaluation.decision.permitted else 0.3,
                     source_trust="system",
                 )
-            except Exception:
-                # Don't let memory storage failures break the execution
-                pass
+                if mem_result and mem_result.success and mem_result.attestation is not None:
+                    # attach memory attestation into the trace payload and audit trace
+                    trace_payload["memory_attestation"] = mem_result.attestation.to_dict()
+                    if self.trust_store:
+                        # update persisted trace to include memory attestation
+                        trace.mutation["memory_attestation"] = mem_result.attestation.to_dict()
+                        self.trust_store.store_audit_trace(trace)
+            except Exception as mem_e:
+                logging.warning("memory write failed: %s", mem_e)
 
             return result
 

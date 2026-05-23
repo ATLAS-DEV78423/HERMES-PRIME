@@ -55,7 +55,7 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
-[# NOTE]
+# NOTE:
 # The `all` extra was intentionally removed to avoid a self-referential
 # packaging loop. If you want an explicit combined extras list, add a
 # non-self-referential array here, for example:

@@ -199,6 +199,56 @@ def build_parser() -> argparse.ArgumentParser:
 
     learn_sub.add_parser("metrics", help="Show learning loop metrics")
 
+    # Brain / Neural Network commands
+    brain_parser = subparsers.add_parser("brain", help="Neural brain network commands")
+    brain_sub = brain_parser.add_subparsers(dest="brain_command")
+
+    brain_write = brain_sub.add_parser("write", help="Write a note to the brain")
+    brain_write.add_argument("--title", required=True, help="Note title")
+    brain_write.add_argument("--content", required=True, help="Note content")
+    brain_write.add_argument("--type", dest="node_type", default="observation",
+                             choices=["topic", "problem", "solution", "observation",
+                                      "pattern", "decision", "concept"])
+    brain_write.add_argument("--tags", default=None, help="Comma-separated tags")
+    brain_write.add_argument("--link-to", default=None, help="Comma-separated node IDs to link to")
+
+    brain_search = brain_sub.add_parser("search", help="Search brain nodes")
+    brain_search.add_argument("--query", required=True, help="Search query")
+    brain_search.add_argument("--type", dest="node_type", default=None,
+                              choices=["topic", "problem", "solution", "observation",
+                                       "pattern", "decision", "concept"])
+    brain_search.add_argument("--limit", type=int, default=20)
+
+    brain_problem = brain_sub.add_parser("problem", help="Track a problem and solution")
+    brain_problem.add_argument("--title", required=True, help="Problem title")
+    brain_problem.add_argument("--description", required=True, help="Problem description")
+    brain_problem.add_argument("--context", default=None, help="Context")
+    brain_problem.add_argument("--solution-title", default=None, help="Solution title (optional)")
+    brain_problem.add_argument("--solution-desc", default=None, help="Solution description (optional)")
+
+    brain_sub.add_parser("status", help="Show brain health and metrics")
+    brain_maintenance = brain_sub.add_parser("maintenance", help="Run brain maintenance")
+    brain_maintenance.add_argument("--dry-run", action="store_true", help="Show what would be done")
+    brain_maintenance.add_argument("--max-age", type=float, default=90.0, help="Max age in days")
+    brain_maintenance.add_argument("--min-confidence", type=float, default=0.2, help="Min confidence")
+
+    brain_export = brain_sub.add_parser("export", help="Export brain as Obsidian vault")
+    brain_export.add_argument("--output", default="./brain-vault", help="Output directory")
+
+    brain_path = brain_sub.add_parser("path", help="Find path between two nodes")
+    brain_path.add_argument("--from-id", required=True, help="Source node ID")
+    brain_path.add_argument("--to-id", required=True, help="Target node ID")
+
+    brain_link = brain_sub.add_parser("link", help="Manually link two nodes")
+    brain_link.add_argument("--source", required=True, help="Source node ID")
+    brain_link.add_argument("--target", required=True, help="Target node ID")
+    brain_link.add_argument("--type", dest="edge_type", default="relates_to",
+                            choices=["solves", "causes", "relates_to", "prerequisite",
+                                     "contradicts", "extends", "references", "produces",
+                                     "blocks", "enables"])
+
+    brain_sub.add_parser("unsolved", help="List unsolved problems")
+
     # Phase 4: Elite Terminal UI
     subparsers.add_parser("dashboard", help="Launch Textual live dashboard")
 
@@ -242,11 +292,15 @@ def _humanize_decision(decision: dict[str, Any]) -> str:
 def main(argv: list[str] | None = None) -> int:
     from hermes_prime.recovery import install_signal_handlers
     install_signal_handlers()
+    import importlib.util as _iu
+    if _iu.find_spec("hermes_cli") is not None:
+        print("! conflicting `hermes` CLI: both hermes-prime and hermes-agent are installed.", flush=True)
+        print("! Use `hermes-prime` instead of `hermes` to ensure this package runs.", flush=True)
 
     if argv is not None and "--prompt" not in argv and "--autonomous" not in argv:
         commands = {
             "doctor", "repair", "inspect", "mint", "evaluate", "patch", "replay",
-            "models", "run", "memory", "agents", "dashboard", "tui", "learn",
+            "models", "run", "memory", "agents", "dashboard", "tui", "learn", "brain",
         }
         non_option_tokens = [token for token in argv if token and not token.startswith("-")]
         if len(non_option_tokens) == 1 and non_option_tokens[0] not in commands:
@@ -883,6 +937,174 @@ def main(argv: list[str] | None = None) -> int:
 
             else:
                 parser.error("unknown learn command")
+            return 0
+
+        # Brain / Neural Network commands
+        if args.command == "brain":
+            from hermes_prime.brain import NeuralGraph, BrainJournal, AutoLinker, BrainMaintenanceAgent, NodeType, EdgeType
+
+            brain_db = workspace_path / ".hermes-prime" / "brain.db"
+            graph = NeuralGraph(brain_db)
+            journal = BrainJournal(graph)
+            linker = AutoLinker(graph)
+            maintenance = BrainMaintenanceAgent(graph, linker)
+
+            if args.brain_command == "write":
+                tags = [t.strip() for t in args.tags.split(",")] if args.tags else []
+                type_map = {
+                    "topic": NodeType.TOPIC, "problem": NodeType.PROBLEM,
+                    "solution": NodeType.SOLUTION, "observation": NodeType.OBSERVATION,
+                    "pattern": NodeType.PATTERN, "decision": NodeType.DECISION,
+                    "concept": NodeType.CONCEPT,
+                }
+                ntype = type_map.get(args.node_type, NodeType.OBSERVATION)
+                node = graph.add_node(ntype, args.title, args.content, tags=tags)
+                link_ids = [x.strip() for x in args.link_to.split(",")] if args.link_to else []
+                for lid in link_ids:
+                    graph.add_edge(node.node_id, lid, EdgeType.RELATES_TO)
+                created = linker.link_new_node(node.node_id)
+                if args.json:
+                    _emit({"node_id": node.node_id, "links_created": created, "node": node.to_dict()}, True)
+                else:
+                    print(f"Brain node written: {node.node_id[:16]}...")
+                    print(f"  Title: {node.title}")
+                    print(f"  Type: {node.node_type.value}")
+                    print(f"  Auto-links created: {created}")
+                return 0
+
+            elif args.brain_command == "search":
+                ntype_enum = NodeType(args.node_type) if args.node_type else None
+                ntypes = [ntype_enum] if ntype_enum else None
+                results = graph.search_nodes(args.query, node_types=ntypes, limit=args.limit)
+                if args.json:
+                    _emit({"query": args.query, "results": [r.to_dict() for r in results]}, True)
+                else:
+                    if not results:
+                        print(f"No brain nodes matching '{args.query}'")
+                    else:
+                        print(f"\nBrain Search: '{args.query}' ({len(results)} results)")
+                        print(f"{'='*60}")
+                        for r in results:
+                            edges = graph.get_node_edges(r.node_id)
+                            print(f"  [{r.node_type.value}] {r.title}")
+                            print(f"    ID: {r.node_id[:16]}... | Confidence: {r.confidence:.2f} | Links: {len(edges)}")
+                            print(f"    {r.content[:100]}")
+                            print()
+                return 0
+
+            elif args.brain_command == "problem":
+                problem = journal.write_problem(args.title, args.description, context=args.context)
+                linker.link_new_node(problem.node_id)
+                print(f"Problem recorded: {problem.node_id[:16]}...")
+                if args.solution_title and args.solution_desc:
+                    solution = journal.write_solution(
+                        args.solution_title, args.solution_desc, problem.node_id,
+                    )
+                    linker.link_problem_to_solution(problem.node_id, solution.node_id)
+                    print(f"Solution recorded: {solution.node_id[:16]}...")
+                return 0
+
+            elif args.brain_command == "status":
+                health = maintenance.get_health_report()
+                metrics = graph.get_metrics()
+                if args.json:
+                    _emit({"health": health, "metrics": metrics}, True)
+                else:
+                    print("\nBrain Health")
+                    print(f"{'='*60}")
+                    print(f"Total nodes: {health['total_nodes']}")
+                    print(f"Total connections: {health['total_edges']}")
+                    print(f"Health score: {health['health_score']:.3f}")
+                    print(f"Unsolved problems: {health['unsolved_problems']}")
+                    print(f"Orphaned nodes: {health['orphaned_nodes']}")
+                    print(f"Low confidence: {health['low_confidence_nodes']}")
+                    print(f"Old unused: {health['old_unused_nodes']}")
+                    if health.get("by_type"):
+                        print("\nBy type:")
+                        for t, c in sorted(health["by_type"].items()):
+                            print(f"  {t}: {c}")
+                return 0
+
+            elif args.brain_command == "maintenance":
+                report = maintenance.run_maintenance(
+                    dry_run=args.dry_run,
+                    max_age_days=args.max_age,
+                    min_confidence=args.min_confidence,
+                )
+                if args.json:
+                    _emit(report, True)
+                else:
+                    print("\nBrain Maintenance")
+                    print(f"{'='*60}")
+                    print(f"Pruned nodes: {report['pruned_nodes']}")
+                    print(f"Merged duplicates: {report['merged_nodes']}")
+                    print(f"Consolidated orphans: {report['consolidated_orphans']}")
+                    print(f"Pruned edges: {report['pruned_edges']}")
+                    print(f"Remaining nodes: {report['remaining_nodes']}")
+                    print(f"Remaining edges: {report['remaining_edges']}")
+                    print(f"Dry run: {report['dry_run']}")
+                return 0
+
+            elif args.brain_command == "export":
+                result = journal.export_obsidian_vault(args.output)
+                if args.json:
+                    _emit(result, True)
+                else:
+                    print(f"Brain exported to {result['vault_path']}")
+                    print(f"  {result['notes_exported']} notes")
+                    print(f"  {result['links_exported']} connections")
+                return 0
+
+            elif args.brain_command == "path":
+                path = graph.find_shortest_path(args.from_id, args.to_id)
+                if args.json:
+                    _emit({"from": args.from_id, "to": args.to_id, "path": path}, True)
+                else:
+                    if path:
+                        print(f"Path ({len(path) - 1} hops):")
+                        for i, nid in enumerate(path):
+                            node = graph.get_node(nid)
+                            name = node.title if node else nid[:16]
+                            arrow = " → " if i < len(path) - 1 else ""
+                            print(f"  {i}. {name}{arrow}")
+                    else:
+                        print("No path found between these nodes.")
+                return 0
+
+            elif args.brain_command == "link":
+                edge = graph.add_edge(
+                    args.source, args.target,
+                    EdgeType(args.edge_type), weight=1.0,
+                )
+                if args.json:
+                    _emit({"edge_id": edge.edge_id if edge else None}, True)
+                else:
+                    if edge:
+                        print(f"Linked: {args.source[:16]}... → {args.target[:16]}... ({args.edge_type})")
+                    else:
+                        print("Failed to create link (may already exist).")
+                return 0
+
+            elif args.brain_command == "unsolved":
+                unsolved = journal.get_problems_unsolved()
+                if args.json:
+                    _emit({"unsolved_problems": [p.to_dict() for p in unsolved]}, True)
+                else:
+                    if not unsolved:
+                        print("No unsolved problems!")
+                    else:
+                        print(f"\nUnsolved Problems ({len(unsolved)})")
+                        print(f"{'='*60}")
+                        for p in unsolved:
+                            sol_count = len(journal.get_solutions_for_problem(p.node_id))
+                            print(f"  {p.title}")
+                            print(f"    ID: {p.node_id[:16]}... | Solutions tried: {sol_count}")
+                            print(f"    {p.content[:100]}")
+                            print()
+                return 0
+
+            else:
+                parser.error("unknown brain command")
             return 0
 
         # Phase 3: Agent Orchestration commands

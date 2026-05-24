@@ -43,8 +43,9 @@ Respond with ONLY the JSON proposal. No preamble or commentary."""
         task: str,
         file_context: Optional[list[str]] = None,
         recent_actions: Optional[list[dict[str, Any]]] = None,
+        learned_guidance: Optional[str] = None,
     ) -> str:
-        """Build user prompt with task + context."""
+        """Build user prompt with task + context + optional learned guidance."""
         prompt_parts = [f"Task: {task}"]
 
         if file_context:
@@ -57,6 +58,9 @@ Respond with ONLY the JSON proposal. No preamble or commentary."""
             for action in recent_actions[-3:]:  # Limit to 3 recent actions
                 prompt_parts.append(f"  - {action.get('action_type')}: {action.get('scope')}")
 
+        if learned_guidance:
+            prompt_parts.append(learned_guidance)
+
         prompt_parts.append("\nPropose your next action as a JSON block.")
         return "\n".join(prompt_parts)
 
@@ -65,12 +69,13 @@ Respond with ONLY the JSON proposal. No preamble or commentary."""
         task: str,
         file_context: Optional[list[str]] = None,
         recent_actions: Optional[list[dict[str, Any]]] = None,
+        learned_guidance: Optional[str] = None,
     ) -> list[dict[str, str]]:
         """Build OpenAI-compatible message list."""
         return [
             {"role": "system", "content": self.build_system_prompt()},
             {
                 "role": "user",
-                "content": self.build_user_prompt(task, file_context, recent_actions),
+                "content": self.build_user_prompt(task, file_context, recent_actions, learned_guidance),
             },
         ]

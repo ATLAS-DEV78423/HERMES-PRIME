@@ -11,6 +11,10 @@ from hermes_prime.contracts import (
     ActionProposal,
     AuditTrace,
 )
+from hermes_prime.learning.outcome import OutcomeTracker, OutcomeStore
+from hermes_prime.learning.registry import LearningRegistry
+from hermes_prime.learning.augmenter import PromptAugmenter
+from hermes_prime.learning.engine import LearningEngine
 from hermes_prime.memory import MemoryStore, DepthPolicy
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.llm.prompt_builder import PromptBuilder
@@ -39,7 +43,7 @@ class AutonomousExecutionResult:
 
 
 class AutonomousExecutor:
-    """Orchestrates autonomous LLM-driven execution with Sentinel governance."""
+    """Orchestrates autonomous LLM-driven execution with Sentinel governance and learning loop."""
 
     def __init__(
         self,
@@ -50,6 +54,9 @@ class AutonomousExecutor:
         forge: Optional[SandboxedForge] = None,
         workspace_root: str | Path = ".",
         signer: Optional[HMACSigner] = None,
+        enable_learning: bool = True,
+        outcome_store: Optional[OutcomeStore] = None,
+        learning_registry: Optional[LearningRegistry] = None,
     ):
         self.llm_client = llm_client
         self.sentinel = sentinel
@@ -64,6 +71,20 @@ class AutonomousExecutor:
             depth_policy=DepthPolicy(max_claims_per_intent=100, max_total_claims=10000),
         )
 
+        hermes_dir = self.workspace_root / ".hermes-prime"
+        outcome_db = outcome_store or OutcomeStore(hermes_dir / "outcomes.db")
+        self.outcome_tracker = OutcomeTracker(outcome_db) if enable_learning else None
+        self.learning_registry = learning_registry or (
+            LearningRegistry(hermes_dir / "learned_patterns.json") if enable_learning else None
+        )
+        self.prompt_augmenter = PromptAugmenter(self.learning_registry) if (enable_learning and self.learning_registry) else None
+        self.learning_engine = LearningEngine(
+            outcome_store=outcome_db,
+            registry=self.learning_registry,
+            memory_store=self.memory_store,
+        ) if (enable_learning and self.learning_registry) else None
+        self._execution_count = 0
+
     def execute(
         self,
         task_prompt: str,
@@ -74,6 +95,14 @@ class AutonomousExecutor:
         """Execute full autonomous loop: prompt → LLM → parse → Sentinel → audit."""
         execution_id = new_urn_uuid()
         scope = scope or str(self.workspace_root)
+
+        # Get learned guidance from learning loop if available
+        learned_guidance = None
+        if self.prompt_augmenter:
+            try:
+                learned_guidance = self.prompt_augmenter.build_augmentation_block(task_prompt)
+            except Exception as lg_e:
+                logging.warning("failed to build learned guidance: %s", lg_e)
 
         try:
             # Step 1: Register intent root
@@ -104,6 +133,7 @@ class AutonomousExecutor:
                 task=task_prompt,
                 file_context=file_context,
                 recent_actions=recent_actions,
+                learned_guidance=learned_guidance,
             )
 
             llm_request = LLMRequest(
@@ -131,7 +161,7 @@ class AutonomousExecutor:
                 )
             except ProposalParsingError as e:
                 trace_id = new_urn_uuid()
-                return AutonomousExecutionResult(
+                result = AutonomousExecutionResult(
                     execution_id=execution_id,
                     task_prompt=task_prompt,
                     trace_id=trace_id,
@@ -142,6 +172,10 @@ class AutonomousExecutor:
                     error_message=str(e),
                     summary=f"Failed to parse LLM output: {e}",
                 )
+                self._record_outcome(task_prompt, "", "", False, False,
+                                      inference_attestation.latency_ms,
+                                      inference_attestation.tokens_used, model, utc_now_iso())
+                return result
 
             # Step 4: Mint capability for the action
             token = self.vault.mint_capability(
@@ -213,20 +247,40 @@ class AutonomousExecutor:
                     source_trust="system",
                 )
                 if mem_result and mem_result.success and mem_result.attestation is not None:
-                    # attach memory attestation into the trace payload and audit trace
                     trace_payload["memory_attestation"] = mem_result.attestation.to_dict()
                     if self.trust_store:
-                        # update persisted trace to include memory attestation
                         trace.mutation["memory_attestation"] = mem_result.attestation.to_dict()
                         self.trust_store.store_audit_trace(trace)
             except Exception as mem_e:
                 logging.warning("memory write failed: %s", mem_e)
 
+            # Record outcome for learning loop
+            self._record_outcome(
+                task_prompt=task_prompt,
+                action_type=proposal.action_type.value,
+                action_scope=proposal.scope,
+                approved=evaluation.decision.permitted,
+                parseable=True,
+                latency_ms=inference_attestation.latency_ms,
+                tokens_used=inference_attestation.tokens_used,
+                model=model,
+                timestamp=utc_now_iso(),
+                blocking_layer=evaluation.decision.blocking_layer,
+                denial_reason=evaluation.decision.denial_reason,
+            )
+
+            # Apply prompt augmentation feedback for success/failure
+            if self.prompt_augmenter and learned_guidance:
+                self.prompt_augmenter.record_application_result(
+                    [p.pattern_id for p in self.learning_registry.list_patterns(limit=5)],
+                    success=evaluation.decision.permitted,
+                )
+
             return result
 
         except Exception as e:
             trace_id = new_urn_uuid()
-            return AutonomousExecutionResult(
+            result = AutonomousExecutionResult(
                 execution_id=execution_id,
                 task_prompt=task_prompt,
                 trace_id=trace_id,
@@ -237,3 +291,49 @@ class AutonomousExecutor:
                 error_message=str(e),
                 summary=f"Autonomous execution failed: {e}",
             )
+
+            self._record_outcome(task_prompt, "", "", False, False, 0, 0, model, utc_now_iso())
+            return result
+
+    def _record_outcome(
+        self,
+        task_prompt: str,
+        action_type: str,
+        action_scope: str,
+        approved: bool,
+        parseable: bool,
+        latency_ms: float,
+        tokens_used: int,
+        model: str,
+        timestamp: str,
+        blocking_layer: int | None = None,
+        denial_reason: str | None = None,
+    ) -> None:
+        if not self.outcome_tracker:
+            return
+        try:
+            self.outcome_tracker.record(
+                execution_id=new_urn_uuid(),
+                task_prompt=task_prompt,
+                action_type=action_type,
+                action_scope=action_scope,
+                approved=approved,
+                parseable=parseable,
+                latency_ms=latency_ms,
+                tokens_used=tokens_used,
+                model=model,
+                timestamp=timestamp,
+                blocking_layer=blocking_layer,
+                denial_reason=denial_reason,
+            )
+            self._execution_count += 1
+
+            if self.learning_engine and self._execution_count % 10 == 0:
+                reflection = self.learning_engine.reflect(min_outcomes=5)
+                if reflection.get("reflected"):
+                    logging.info(
+                        "learning loop reflected: %d patterns created",
+                        reflection.get("patterns_created", 0),
+                    )
+        except Exception as oe:
+            logging.warning("failed to record outcome: %s", oe)

@@ -684,6 +684,76 @@ class AgentSpawnAttestation:
         }
 
 
+@dataclass
+class ExecutionOutcome:
+    """Record of an autonomous execution outcome for learning loop."""
+    execution_id: str
+    task_prompt: str
+    action_type: str
+    action_scope: str
+    approved: bool
+    blocking_layer: int | None
+    denial_reason: str | None
+    parseable: bool
+    latency_ms: float
+    tokens_used: int
+    model: str
+    timestamp: str
+    outcome_labels: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _require_urn_uuid(self.execution_id, "execution_id")
+        _ensure_future_iso(self.timestamp, "timestamp")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "execution_id": self.execution_id,
+            "task_prompt": self.task_prompt,
+            "action_type": self.action_type,
+            "action_scope": self.action_scope,
+            "approved": self.approved,
+            "blocking_layer": self.blocking_layer,
+            "denial_reason": self.denial_reason,
+            "parseable": self.parseable,
+            "latency_ms": self.latency_ms,
+            "tokens_used": self.tokens_used,
+            "model": self.model,
+            "timestamp": self.timestamp,
+            "outcome_labels": list(self.outcome_labels),
+        }
+
+
+@dataclass
+class LearnedPattern:
+    """A pattern extracted by the learning loop from past outcomes."""
+    pattern_id: str
+    pattern_type: str  # "prompt_instruction", "action_heuristic", "policy_suggestion", "task_pattern"
+    content: str
+    confidence: float
+    source_outcomes: list[str]
+    action_types: list[str]
+    tags: list[str]
+    created_at: str
+    last_applied_at: str | None = None
+    application_count: int = 0
+    success_rate: float = 0.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "pattern_id": self.pattern_id,
+            "pattern_type": self.pattern_type,
+            "content": self.content,
+            "confidence": self.confidence,
+            "source_outcomes": list(self.source_outcomes),
+            "action_types": list(self.action_types),
+            "tags": list(self.tags),
+            "created_at": self.created_at,
+            "last_applied_at": self.last_applied_at,
+            "application_count": self.application_count,
+            "success_rate": self.success_rate,
+        }
+
+
 def trust_transition_allowed(current: TrustState, nxt: TrustState) -> bool:
     if current == nxt:
         return True

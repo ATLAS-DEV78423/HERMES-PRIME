@@ -14,6 +14,9 @@ from hermes_prime.contracts import (
     ProvenanceAttestation,
     RiskTier,
 )
+from hermes_prime.learning.outcome import OutcomeStore
+from hermes_prime.learning.registry import LearningRegistry
+from hermes_prime.learning.engine import LearningEngine
 from hermes_prime.memory import DepthPolicy, MemoryStore
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.backends.mempalace_backend import MemPalaceBackend
@@ -175,6 +178,27 @@ def build_parser() -> argparse.ArgumentParser:
     agents_kill = agents_sub.add_parser("kill", help="Kill an agent and its descendants")
     agents_kill.add_argument("--agent-id", required=True, help="Agent URN to kill")
 
+    # Learning Loop commands
+    learn_parser = subparsers.add_parser("learn", help="Learning loop commands")
+    learn_sub = learn_parser.add_subparsers(dest="learn_command")
+
+    learn_reflect = learn_sub.add_parser("reflect", help="Run learning loop reflection")
+    learn_reflect.add_argument("--min-outcomes", type=int, default=5, help="Minimum outcomes required for reflection")
+
+    learn_sub.add_parser("status", help="Show learning loop status")
+
+    learn_patterns = learn_sub.add_parser("patterns", help="List learned patterns")
+    learn_patterns.add_argument("--type", dest="pattern_type", default=None, help="Filter by pattern type")
+    learn_patterns.add_argument("--min-confidence", type=float, default=0.0, help="Minimum confidence filter")
+    learn_patterns.add_argument("--limit", type=int, default=20, help="Max patterns to show")
+
+    learn_forget = learn_sub.add_parser("forget", help="Remove a learned pattern")
+    learn_forget.add_argument("--pattern-id", required=True, help="Pattern ID to remove")
+
+    learn_sub.add_parser("outcomes", help="Show execution outcome summary")
+
+    learn_sub.add_parser("metrics", help="Show learning loop metrics")
+
     # Phase 4: Elite Terminal UI
     subparsers.add_parser("dashboard", help="Launch Textual live dashboard")
 
@@ -222,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
     if argv is not None and "--prompt" not in argv and "--autonomous" not in argv:
         commands = {
             "doctor", "repair", "inspect", "mint", "evaluate", "patch", "replay",
-            "models", "run", "memory", "agents", "dashboard", "tui",
+            "models", "run", "memory", "agents", "dashboard", "tui", "learn",
         }
         non_option_tokens = [token for token in argv if token and not token.startswith("-")]
         if len(non_option_tokens) == 1 and non_option_tokens[0] not in commands:
@@ -739,6 +763,127 @@ def main(argv: list[str] | None = None) -> int:
 
             parser.error("unknown tui command")
             return 1
+
+        # Learning Loop commands
+        if args.command == "learn":
+            outcome_store = OutcomeStore(workspace_path / ".hermes-prime" / "outcomes.db")
+            registry = LearningRegistry(workspace_path / ".hermes-prime" / "learned_patterns.json")
+            memory_store = MemoryStore(
+                backend=SQLiteMemoryBackend(workspace_path / ".hermes-prime" / "memory.db"),
+                depth_policy=DepthPolicy(),
+            )
+            engine = LearningEngine(
+                outcome_store=outcome_store,
+                registry=registry,
+                memory_store=memory_store,
+            )
+
+            if args.learn_command == "reflect":
+                result = engine.reflect(min_outcomes=args.min_outcomes)
+                if args.json:
+                    _emit(result, True)
+                else:
+                    if result.get("reflected"):
+                        print(f"Reflection complete: {result['patterns_created']} patterns created")
+                        print(f"Reviewed {result['total_outcomes_reviewed']} outcomes")
+                        m = result.get("metrics", {})
+                        print(f"Approval rate: {m.get('approval_rate', 0):.1%}")
+                        print(f"Parse rate: {m.get('parse_rate', 0):.1%}")
+                    else:
+                        print(f"No reflection: {result.get('reason', 'unknown')}")
+                return 0
+
+            elif args.learn_command == "status":
+                status = engine.status()
+                if args.json:
+                    _emit(status, True)
+                else:
+                    outcomes = status.get("outcomes", {})
+                    patterns = status.get("learned_patterns", {})
+                    print("\nLearning Loop Status")
+                    print(f"{'='*60}")
+                    print(f"Total executions tracked: {outcomes.get('total', 0)}")
+                    print(f"Approval rate: {outcomes.get('approval_rate', 0):.1%}")
+                    print(f"Parse rate: {outcomes.get('parse_rate', 0):.1%}")
+                    print(f"Learned patterns: {patterns.get('total_patterns', 0)}")
+                    print(f"By type: {patterns.get('by_type', {})}")
+                    print(f"Ready to learn: {'yes' if status.get('ready_to_learn') else 'no (need 5+ outcomes)'}")
+                return 0
+
+            elif args.learn_command == "patterns":
+                patterns = registry.list_patterns(
+                    pattern_type=args.pattern_type,
+                    min_confidence=args.min_confidence,
+                    limit=args.limit,
+                )
+                if args.json:
+                    _emit({"patterns": [p.to_dict() for p in patterns], "count": len(patterns)}, True)
+                else:
+                    if not patterns:
+                        print("No learned patterns found.")
+                    else:
+                        print(f"\nLearned Patterns ({len(patterns)})")
+                        print(f"{'='*60}")
+                        for p in patterns:
+                            print(f"  [{p.pattern_type}] {p.pattern_id[:16]}... (confidence: {p.confidence:.2f})")
+                            print(f"  {p.content[:120]}")
+                            print(f"  Applied: {p.application_count}x | Success: {p.success_rate:.0%}")
+                            if p.tags:
+                                print(f"  Tags: {', '.join(p.tags)}")
+                            print()
+                return 0
+
+            elif args.learn_command == "forget":
+                success = registry.remove(args.pattern_id)
+                if args.json:
+                    _emit({"removed": success, "pattern_id": args.pattern_id}, True)
+                else:
+                    if success:
+                        print(f"Pattern {args.pattern_id} removed.")
+                    else:
+                        print(f"Pattern {args.pattern_id} not found.")
+                return 0 if success else 1
+
+            elif args.learn_command == "outcomes":
+                metrics = outcome_store.get_metrics()
+                recent = outcome_store.get_recent(limit=10)
+                if args.json:
+                    _emit({"metrics": metrics, "recent": [o.to_dict() for o in recent]}, True)
+                else:
+                    print("\nExecution Outcomes")
+                    print(f"{'='*60}")
+                    print(f"Total: {metrics.get('total', 0)}")
+                    print(f"Approved: {metrics.get('approved', 0)}")
+                    print(f"Rejected by Sentinel: {metrics.get('rejected_by_sentinel', 0)}")
+                    print(f"Parse failures: {metrics.get('parse_failures', 0)}")
+                    print(f"Approval rate: {metrics.get('approval_rate', 0):.1%}")
+                    print(f"Avg latency: {metrics.get('avg_latency_ms', 0)}ms")
+                    print(f"Avg tokens: {metrics.get('avg_tokens', 0)}")
+                    if metrics.get("blocking_layer_distribution"):
+                        print(f"Blocking layers: {metrics['blocking_layer_distribution']}")
+                    print("\nRecent outcomes:")
+                    for o in recent:
+                        status = "✓" if o.approved else "✗"
+                        print(f"  [{status}] {o.action_type:20s} {o.task_prompt[:50]}")
+                return 0
+
+            elif args.learn_command == "metrics":
+                outcome_metrics = outcome_store.get_metrics()
+                registry_metrics = registry.get_metrics()
+                payload = {"outcomes": outcome_metrics, "patterns": registry_metrics}
+                if args.json:
+                    _emit(payload, True)
+                else:
+                    print("\nLearning Metrics")
+                    print(f"{'='*60}")
+                    print(f"Outcomes tracked: {outcome_metrics.get('total', 0)}")
+                    print(f"Patterns learned: {registry_metrics.get('total_patterns', 0)}")
+                    print(f"Avg pattern confidence: {registry_metrics.get('avg_confidence', 0):.3f}")
+                return 0
+
+            else:
+                parser.error("unknown learn command")
+            return 0
 
         # Phase 3: Agent Orchestration commands
         if args.command == "agents":

@@ -68,7 +68,7 @@ class BrainNode:
         }
 
     def to_obsidian_note(self) -> str:
-        backlinks = []
+        backlinks: list[str] = []
         lines = ["---"]
         lines.append(f"id: {self.node_id}")
         lines.append(f"type: {self.node_type.value}")

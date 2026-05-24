@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 import time
-from typing import Optional
 
 import requests
 
@@ -38,7 +36,7 @@ class OllamaClient(LLMClient):
     def infer(self, request: LLMRequest) -> LLMResponse:
         """Execute inference via /api/generate or /api/chat."""
         start_time = time.time()
-        
+
         # Use /api/chat for multi-turn conversations
         payload = {
             "model": request.model,
@@ -63,12 +61,12 @@ class OllamaClient(LLMClient):
                     tokens_used=0,
                     latency_ms=(time.time() - start_time) * 1000,
                 )
-            
+
             data = response.json()
             message = data.get("message", {})
             content = message.get("content", "")
             tokens = data.get("eval_count", 0)
-            
+
             return LLMResponse(
                 model=request.model,
                 message_content=content,
@@ -76,7 +74,7 @@ class OllamaClient(LLMClient):
                 tokens_used=tokens,
                 latency_ms=(time.time() - start_time) * 1000,
             )
-        except Exception as e:
+        except Exception:
             return LLMResponse(
                 model=request.model,
                 message_content="",

@@ -11,7 +11,7 @@ from hermes_prime.contracts import (
     RiskTier,
 )
 from hermes_prime.orch import AgentMesh, CapabilityScoper, Dispatcher, RecursionWatchdog
-from hermes_prime.orch.mesh import AgentMeshError, AgentNotFoundError, DepthLimitError
+from hermes_prime.orch.mesh import AgentNotFoundError, DepthLimitError
 from hermes_prime.orch.isolation import ScopeViolation
 from hermes_prime.utils import new_urn_uuid
 
@@ -125,7 +125,7 @@ class AgentMeshTests(unittest.TestCase):
 
     def test_remove_cascades(self) -> None:
         n1 = self.mesh.register_agent(task_description="root", capability_scope="/ws")
-        n2 = self.mesh.register_agent(task_description="child", capability_scope="/ws", parent_id=n1.agent_id)
+        self.mesh.register_agent(task_description="child", capability_scope="/ws", parent_id=n1.agent_id)
         self.mesh.remove(n1.agent_id)
         self.assertEqual(self.mesh.agent_count, 0)
 

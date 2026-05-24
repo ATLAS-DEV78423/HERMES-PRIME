@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import sys
 from typing import Any
 
 from .banner import HERMES_PRIME_LOGO
 from .components import OperatorConsole, TelemetryHeader, divider_heavy, divider_thin
-from .theme import HERMES_THEME
 
 
 class HermesConsole:

@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from hermes_prime.contracts import IntentRoot, MemoryClaim, MemoryTier, TrustState
+from hermes_prime.contracts import IntentRoot
 from hermes_prime.memory import DepthPolicy, MemoryStore
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.consolidation import (
@@ -65,7 +65,7 @@ class TestReflectiveConsolidator(unittest.TestCase):
         return fact_ids
 
     def test_consolidate_creates_reflective_memory(self):
-        source_ids = self._write_sources(2)
+        self._write_sources(2)
         request = ConsolidationRequest(
             intent_root=self.intent,
             summary="Task completed: all steps executed successfully. Key decision was to use approach X.",

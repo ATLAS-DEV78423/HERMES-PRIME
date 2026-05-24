@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -10,12 +9,7 @@ from hermes_prime.autonomous.inference_logger import InferenceLogger, InferenceA
 from hermes_prime.autonomous.proposal_parser import ProposalParser, ProposalParsingError
 from hermes_prime.contracts import (
     ActionProposal,
-    ActionType,
     AuditTrace,
-    IntentRoot,
-    LifecycleState,
-    RiskTier,
-    TrustState,
 )
 from hermes_prime.memory import MemoryStore, DepthPolicy
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
@@ -27,7 +21,7 @@ from infrastructure.sandboxed_forge.forge import SandboxedForge
 from infrastructure.trust_store import TrustStore
 from infrastructure.vault.capabilities import CapabilityVault
 from pathlib import Path
-from hermes_prime.llm.client import LLMRequest
+from hermes_prime.llm.client import LLMClient, LLMRequest
 
 
 @dataclass

@@ -4,7 +4,6 @@ import shutil
 from dataclasses import dataclass
 from typing import Any
 
-from .theme import HERMES_THEME, HermesColor, HermesStyle
 
 
 def divider_thin(length: int | None = None) -> str:

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import sys
+import importlib.util
 from pathlib import Path
-from typing import Any
 
-from hermes_prime.contracts import MemoryClaim, MemoryTier
+from hermes_prime.contracts import MemoryClaim
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
 from hermes_prime.utils import utc_now_iso
 
@@ -17,11 +16,7 @@ class AtlasBackend(MemoryBackend):
         self._chroma_available = self._check_chroma()
 
     def _check_chroma(self) -> bool:
-        try:
-            import chromadb
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("chromadb") is not None
 
     def _get_collection(self):
         if self._collection is not None:

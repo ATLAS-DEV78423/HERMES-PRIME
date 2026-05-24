@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import importlib.util
 import re
 from pathlib import Path
-from typing import Any
 
 from hermes_prime.contracts import MemoryClaim, MemoryTier, TrustState
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
-from hermes_prime.utils import new_urn_uuid, utc_now_iso
+from hermes_prime.utils import utc_now_iso
 
 _ENTITY_BOOST_WEIGHT = 0.5
 _DEFAULT_CHROMA_PATH = Path.cwd() / ".hermes-prime" / "mem0_chroma"
@@ -80,11 +80,7 @@ class Mem0Backend(MemoryBackend):
         self._chroma_available = self._check_chroma()
 
     def _check_chroma(self) -> bool:
-        try:
-            import chromadb
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("chromadb") is not None
 
     def _get_collections(self):
         if self._memory_collection is not None:

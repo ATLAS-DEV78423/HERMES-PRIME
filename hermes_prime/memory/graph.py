@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from pathlib import Path
-from typing import Optional
 
 
 class KnowledgeGraph:
@@ -28,7 +27,6 @@ class KnowledgeGraph:
         self._load_from_db()
 
     def _load_from_db(self) -> None:
-        import sqlite3
         for row in self._conn.execute("SELECT child_id, parent_id FROM memory_graph"):
             child, parent = row
             self._edges[child] = parent

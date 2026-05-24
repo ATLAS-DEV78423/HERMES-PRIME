@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from hermes_prime.contracts import IntentRoot, MemoryClaim, TrustState
+from hermes_prime.contracts import IntentRoot, TrustState
 from hermes_prime.memory.records import (
     MemoryRecord,
     MemoryType,

@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import hashlib
-import secrets
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Optional
 
 from hermes_prime.contracts import (
     FabricAugmentation,
     FabricPatternMatch,
     PatternClassification,
 )
-from hermes_prime.utils import hash_struct, new_urn_uuid, read_text_safe, utc_now_iso
+from hermes_prime.utils import new_urn_uuid, read_text_safe, utc_now_iso
 
 
 @dataclass

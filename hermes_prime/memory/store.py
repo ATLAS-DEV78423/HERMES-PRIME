@@ -17,7 +17,6 @@ from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.depth import DepthPolicy
 from hermes_prime.memory.provenance import MemoryAttestation, ProvenanceLinker
 from hermes_prime.signing import HMACSigner
-from hermes_prime.utils import new_urn_uuid, utc_now_iso
 
 
 class MemoryStoreError(RuntimeError):

@@ -4,15 +4,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from hermes_prime.contracts import IntentRoot, MemoryClaim, MemoryTier, TrustState
-from hermes_prime.memory import DepthPolicy, MemoryStore, ProvenanceLinker
+from hermes_prime.contracts import IntentRoot
+from hermes_prime.memory import DepthPolicy, MemoryStore
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.base import MemorySearchResult
 from hermes_prime.memory.compiler import (
     ChainCompressor,
     ContextCompiler,
     ContextQuery,
-    ContextResult,
     TrustFilter,
 )
 from hermes_prime.memory.graph import KnowledgeGraph
@@ -249,7 +248,7 @@ class TestContextCompiler(unittest.TestCase):
 
     def test_compile_with_chain_compression(self):
         w1 = self.store.write("root cause", {"agent": "test"}, self.intent, causal_parent=None)
-        w2 = self.store.write(
+        self.store.write(
             "followup", {"agent": "test"}, self.intent,
             causal_parent=w1.fact_id,
         )

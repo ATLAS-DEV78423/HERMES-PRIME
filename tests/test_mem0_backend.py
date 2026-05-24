@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
@@ -85,6 +86,10 @@ class TestEntityExtraction(unittest.TestCase):
         self.assertEqual(texts.count("alice"), 1)
 
 
+@unittest.skipUnless(
+    importlib.util.find_spec("chromadb") is not None,
+    "chromadb not installed",
+)
 class TestMem0Backend(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())

@@ -1,13 +1,10 @@
-import json
 import unittest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from hermes_prime.autonomous.executor import AutonomousExecutor
 from hermes_prime.autonomous.inference_logger import InferenceLogger
 from hermes_prime.autonomous.proposal_parser import ProposalParser, ProposalParsingError
-from hermes_prime.contracts import ActionType, RiskTier
-from hermes_prime.llm.client import LLMRequest, LLMResponse, LLMClient
+from hermes_prime.contracts import ActionType
+from hermes_prime.llm.client import LLMRequest, LLMResponse
 from hermes_prime.llm.ollama_adapter import OllamaClient
 from hermes_prime.llm.prompt_builder import PromptBuilder
 from hermes_prime.llm.vllm_adapter import VLLMClient
@@ -47,7 +44,7 @@ class TestProposalParser(unittest.TestCase):
 ```"""
         intent_root = "urn:uuid:12345678-1234-1234-1234-123456789012"
         proposal = ProposalParser.parse(llm_output, intent_root, "/workspace")
-        
+
         self.assertEqual(proposal.action_type, ActionType.FILESYSTEM_READ)
         self.assertEqual(proposal.scope, "/workspace/src")
         self.assertEqual(proposal.capability, "cap:file-read:scoped")
@@ -55,7 +52,7 @@ class TestProposalParser(unittest.TestCase):
     def test_parse_invalid_json(self):
         llm_output = "```json { invalid json }```"
         intent_root = "urn:uuid:12345678-1234-1234-1234-123456789012"
-        
+
         with self.assertRaises(ProposalParsingError):
             ProposalParser.parse(llm_output, intent_root, "/workspace")
 
@@ -66,7 +63,7 @@ class TestProposalParser(unittest.TestCase):
 }
 ```"""
         intent_root = "urn:uuid:12345678-1234-1234-1234-123456789012"
-        
+
         with self.assertRaises(ProposalParsingError):
             ProposalParser.parse(llm_output, intent_root, "/workspace")
 
@@ -90,9 +87,9 @@ class TestInferenceLogger(unittest.TestCase):
             tokens_used=42,
             latency_ms=1234.5,
         )
-        
+
         attestation = InferenceLogger.create_attestation(request, response, signature="sig:test")
-        
+
         self.assertEqual(attestation.model, "mistral")
         self.assertEqual(attestation.tokens_used, 42)
         self.assertGreater(attestation.latency_ms, 0)
@@ -110,10 +107,10 @@ class TestInferenceLogger(unittest.TestCase):
             tokens_used=42,
             latency_ms=1234.5,
         )
-        
+
         attestation = InferenceLogger.create_attestation(request, response, signature="sig:test")
         d = attestation.to_dict()
-        
+
         self.assertIn("attestation_id", d)
         self.assertEqual(d["model"], "mistral")
         self.assertEqual(d["tokens_used"], 42)
@@ -143,7 +140,7 @@ class TestLLMClients(unittest.TestCase):
             ]
         }
         mock_get.return_value = mock_response
-        
+
         client = OllamaClient()
         models = client.list_models()
         self.assertEqual(len(models), 2)
@@ -158,28 +155,28 @@ class TestLLMClients(unittest.TestCase):
             "eval_count": 100,
         }
         mock_post.return_value = mock_response
-        
+
         client = OllamaClient()
         request = LLMRequest(
             model="mistral",
             messages=[{"role": "user", "content": "test"}],
         )
         response = client.infer(request)
-        
+
         self.assertEqual(response.tokens_used, 100)
         self.assertIn("action_type", response.message_content)
 
     @patch("requests.Session.post")
     def test_ollama_infer_error(self, mock_post):
         mock_post.return_value.status_code = 500
-        
+
         client = OllamaClient()
         request = LLMRequest(
             model="mistral",
             messages=[{"role": "user", "content": "test"}],
         )
         response = client.infer(request)
-        
+
         self.assertEqual(response.finish_reason, "error")
         self.assertEqual(response.message_content, "")
 
@@ -198,14 +195,14 @@ class TestLLMClients(unittest.TestCase):
             "usage": {"completion_tokens": 50},
         }
         mock_post.return_value = mock_response
-        
+
         client = VLLMClient()
         request = LLMRequest(
             model="mistral",
             messages=[{"role": "user", "content": "test"}],
         )
         response = client.infer(request)
-        
+
         self.assertEqual(response.tokens_used, 50)
         self.assertEqual(response.message_content, "test response")
 

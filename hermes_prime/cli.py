@@ -18,7 +18,7 @@ from hermes_prime.contracts import (
 from hermes_prime.memory import DepthPolicy, MemoryStore
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.backends.mempalace_backend import MemPalaceBackend
-from hermes_prime.utils import hash_struct, new_urn_uuid, sha256_bytes, utc_now_iso
+from hermes_prime.utils import new_urn_uuid, sha256_bytes, utc_now_iso
 from infrastructure.backends import BackendRegistry
 from infrastructure.policy_engine.bundle import PolicyBundle
 from infrastructure.policy_engine.engine import PolicyContext, PolicyEngine
@@ -159,7 +159,7 @@ def build_parser() -> argparse.ArgumentParser:
     agents_kill.add_argument("--agent-id", required=True, help="Agent URN to kill")
 
     # Phase 4: Elite Terminal UI
-    dashboard_parser = subparsers.add_parser("dashboard", help="Launch Textual live dashboard")
+    subparsers.add_parser("dashboard", help="Launch Textual live dashboard")
 
     tui_parser = subparsers.add_parser("tui", help="Terminal UI components")
     tui_sub = tui_parser.add_subparsers(dest="tui_command")
@@ -698,7 +698,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "tui":
             from hermes_prime.tui.banner import HERMES_PRIME_LOGO
             from hermes_prime.tui.components import (
-                OperatorConsole, TelemetryHeader, divider_heavy,
+                OperatorConsole, TelemetryHeader,
             )
             from hermes_prime.tui.animations import boot_sequence
 
@@ -795,7 +795,7 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 from hermes_prime.llm.ollama_adapter import OllamaClient
                 from hermes_prime.autonomous.executor import AutonomousExecutor
-                
+
                 client = OllamaClient()
                 if not client.health_check():
                     print("Ollama is not running. Start it with: ollama serve")
@@ -814,7 +814,7 @@ def main(argv: list[str] | None = None) -> int:
                     model=args.model,
                     scope=args.scope,
                 )
-                
+
                 payload = {
                     "execution_id": result.execution_id,
                     "status": result.execution_status,
@@ -825,7 +825,7 @@ def main(argv: list[str] | None = None) -> int:
                     "inference": result.inference_attestation.to_dict() if result.inference_attestation else None,
                     "summary": result.summary,
                 }
-                
+
                 if args.json:
                     _emit(payload, True)
                 else:
@@ -844,7 +844,7 @@ def main(argv: list[str] | None = None) -> int:
                         print(f"Tokens Used: {result.inference_attestation.tokens_used}")
                     print(f"Trace ID: {result.trace_id}")
                     print(f"{'='*60}\n")
-                
+
                 return 0 if result.execution_status == "success" else 1
             except ImportError:
                 print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
@@ -934,12 +934,12 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 from hermes_prime.llm.ollama_adapter import OllamaClient
                 from hermes_prime.autonomous.executor import AutonomousExecutor
-                
+
                 client = OllamaClient()
                 if not client.health_check():
                     print("Ollama is not running. Start it with: ollama serve")
                     return 1
-                
+
                 executor = AutonomousExecutor(
                     llm_client=client,
                     sentinel=sentinel,
@@ -951,7 +951,7 @@ def main(argv: list[str] | None = None) -> int:
                     task_prompt=args.prompt,
                     model=args.model,
                 )
-                
+
                 if args.json:
                     _emit({
                         "execution_id": result.execution_id,

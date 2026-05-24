@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-import os
+import importlib.util
 import shutil
 import tempfile
 
+import pytest
+
 from hermes_prime.contracts import MemoryClaim, MemoryTier, TrustState
 from hermes_prime.utils import new_urn_uuid, utc_now_iso
+
+pytestmark = pytest.mark.skipif(
+    importlib.util.find_spec("mempalace") is None,
+    reason="mempalace not installed",
+)
 
 
 class TestMemPalaceBackend:

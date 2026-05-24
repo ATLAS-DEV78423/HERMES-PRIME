@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from hermes_prime.contracts import IntentRoot, MemoryClaim, MemoryTier, TrustState

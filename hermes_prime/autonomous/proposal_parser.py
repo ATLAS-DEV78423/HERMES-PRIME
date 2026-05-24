@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Optional
+from typing import Any
 
 from hermes_prime.contracts import ActionProposal, ActionType, RiskTier
 from hermes_prime.utils import new_urn_uuid, utc_now_iso
@@ -57,7 +57,7 @@ class ProposalParser:
         # Normalize and validate action_type
         try:
             action_type = ActionType(proposal_dict["action_type"])
-        except ValueError as e:
+        except ValueError:
             raise ProposalParsingError(f"Invalid action_type: {proposal_dict['action_type']}")
 
         # Default risk tier to T1 if not specified

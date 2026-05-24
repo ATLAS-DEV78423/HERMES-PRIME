@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from hermes_prime.contracts import MemoryClaim, MemoryTier, TrustState
+from hermes_prime.contracts import MemoryClaim
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
 from hermes_prime.memory.graphify_bridge import GraphifyBridge
-from hermes_prime.utils import utc_now_iso
 
 
 class GraphifyBackend(MemoryBackend):
@@ -76,7 +75,7 @@ class GraphifyBackend(MemoryBackend):
         if not graph_labels:
             return base_results[:limit]
 
-        query_words = set(query.lower().split())
+        set(query.lower().split())
         for r in base_results:
             claim_lower = r.claim.lower()
             overlap = len(graph_labels & set(claim_lower.split()))

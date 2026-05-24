@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Optional
 
 from hermes_prime.contracts import MemoryClaim, TrustState
 from hermes_prime.utils import sha256_text

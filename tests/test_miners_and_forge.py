@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from hermes_prime.contracts import ActionProposal, ActionType, RiskTier, SentinelDecision
+from hermes_prime.contracts import ActionProposal, SentinelDecision
 from hermes_prime.utils import new_urn_uuid, utc_now_iso
 from infrastructure.sandboxed_forge.forge import SandboxedForge
 from miners.ast_miner.miner import AstMiner

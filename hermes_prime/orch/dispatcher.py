@@ -11,7 +11,7 @@ from ..contracts import (
     CapabilityToken,
     RiskTier,
 )
-from ..utils import new_urn_uuid, utc_now_iso
+from ..utils import new_urn_uuid
 from .mesh import AgentMesh, DepthLimitError
 from .watchdog import RecursionWatchdog
 

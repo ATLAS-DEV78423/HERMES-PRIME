@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 from hermes_prime.contracts import MemoryClaim
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
@@ -38,7 +37,6 @@ class SQLiteMemoryBackend(MemoryBackend):
         self.conn.commit()
 
     def store(self, claim: MemoryClaim) -> None:
-        import sqlite3
         now = claim.timestamp
         contradictions = json.dumps(claim.contradictions, sort_keys=True, ensure_ascii=True)
         payload = claim.to_dict()
@@ -62,7 +60,6 @@ class SQLiteMemoryBackend(MemoryBackend):
         self.conn.commit()
 
     def get(self, fact_id: str) -> MemoryClaim | None:
-        import sqlite3
         row = self.conn.execute(
             "SELECT payload FROM memory_claims WHERE fact_id = ?", (fact_id,)
         ).fetchone()

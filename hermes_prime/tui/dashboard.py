@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import ClassVar
 
 from .banner import HERMES_PRIME_LOGO_SMALL, SENTINEL_SHIELD
-from .components import divider_heavy
-from .theme import HERMES_THEME
 
 
 class HermesDashboard:
@@ -21,8 +19,8 @@ class HermesDashboard:
 
     def _run_textual(self) -> int:
         from textual.app import App, ComposeResult
-        from textual.containers import Container, Horizontal, Vertical
-        from textual.widgets import Header, Footer, Static, Label
+        from textual.containers import Container
+        from textual.widgets import Header, Footer, Static
 
         class HermesApp(App):
             CSS: ClassVar[str] = """

@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from hermes_prime.contracts import IntentRoot, MemoryClaim, TrustState
-from hermes_prime.memory.base import MemorySearchResult
 from hermes_prime.memory.store import MemoryStore, MemoryStoreResult
 
 

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import os
-import tempfile
 from pathlib import Path
-from typing import Any, Optional
 
 from hermes_prime.contracts import MemoryClaim, MemoryTier, TrustState
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
@@ -53,7 +51,6 @@ class MemPalaceBackend(MemoryBackend):
 
     def store(self, claim: MemoryClaim) -> None:
         self._ensure_initialized()
-        from mempalace.miner import add_drawer
 
         wing = self._wing_for_claim(claim)
         room = self._room_for_claim(claim)

@@ -4,9 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from hermes_prime.contracts import IntentRoot, MemoryClaim
-from hermes_prime.memory.graph import KnowledgeGraph
-from hermes_prime.memory.records import MemoryType, record_from_claim
-from hermes_prime.memory.store import MemoryStore, MemoryStoreResult
+from hermes_prime.memory.store import MemoryStore
 
 
 @dataclass

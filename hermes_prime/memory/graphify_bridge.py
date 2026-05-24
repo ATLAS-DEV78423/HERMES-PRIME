@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 from typing import Any
@@ -25,11 +26,7 @@ class GraphifyBridge:
 
     @property
     def available(self) -> bool:
-        try:
-            import graphify
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("graphify") is not None
 
     def extract(self, target_path: str | Path | None = None) -> dict[str, Any]:
         """Run graphify extract-build pipeline on the workspace.

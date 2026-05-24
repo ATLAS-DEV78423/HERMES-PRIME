@@ -95,7 +95,8 @@ class TestDecayPolicy(unittest.TestCase):
         self.assertGreater(uv_ratio, val_ratio)
 
     def test_access_decay_accelerator(self):
-        claim = _make_claim(memory_type="episodic", timestamp=utc_now_iso())
+        old_ts = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=30)).isoformat()
+        claim = _make_claim(memory_type="episodic", timestamp=old_ts)
         ratio_no_access = self.policy.effective_age_ratio(claim, access_days_since=None)
         ratio_with_access = self.policy.effective_age_ratio(claim, access_days_since=60)
         self.assertGreater(ratio_with_access, ratio_no_access)
@@ -233,11 +234,11 @@ class TestDecayScheduler(unittest.TestCase):
         self.assertEqual(result.deleted_count, 0)
 
     def test_unverified_decays_faster_than_validated(self):
-        unvalidated = self._add_claim(
+        self._add_claim(
             "uv", memory_type="episodic",
             trust_state=TrustState.UNVERIFIED, days_ago=60,
         )
-        validated = self._add_claim(
+        self._add_claim(
             "val", memory_type="episodic",
             trust_state=TrustState.VALIDATED, days_ago=60,
         )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+import importlib.util
 
 from hermes_prime.contracts import MemoryClaim
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
@@ -13,11 +13,7 @@ class ZepBackend(MemoryBackend):
         self._available = self._check_zep()
 
     def _check_zep(self) -> bool:
-        try:
-            import zep
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("zep") is not None
 
     def store(self, claim: MemoryClaim) -> None:
         raise NotImplementedError("Zep backend not yet implemented")

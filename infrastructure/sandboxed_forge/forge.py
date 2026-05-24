@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from hermes_prime.contracts import ActionProposal, ActionType, RiskTier, SentinelDecision
 from hermes_prime.utils import canonical_json, hash_struct, new_urn_uuid, utc_now_iso

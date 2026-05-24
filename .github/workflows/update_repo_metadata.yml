@@ -26,8 +26,12 @@ jobs:
               description: description,
               homepage: homepage,
             });
-            await github.rest.repos.replaceAllTopics({
-              owner: repo.owner,
-              repo: repo.repo,
-              names: topics,
-            });
+            try {
+              await github.rest.repos.replaceAllTopics({
+                owner: repo.owner,
+                repo: repo.repo,
+                names: topics,
+              });
+            } catch (error) {
+              core.warning(`Could not update repository topics: ${error.message}`);
+            }

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from hermes_prime.contracts import IntentRoot, MemoryClaim, MemoryTier, TrustState
-from hermes_prime.memory import DepthPolicy, MemoryStore, ProvenanceLinker
+from hermes_prime.memory import DepthPolicy, MemoryStore
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.governor import (
     ContradictionDetector,

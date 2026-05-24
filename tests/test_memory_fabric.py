@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +9,6 @@ from hermes_prime.contracts import (
     MemoryClaim,
     MemoryTier,
     TrustState,
-    trust_transition_allowed,
 )
 from hermes_prime.memory import DepthPolicy, MemoryStore, ProvenanceLinker
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend

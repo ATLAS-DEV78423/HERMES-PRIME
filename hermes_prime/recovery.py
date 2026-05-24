@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import logging
-import os
 import signal
 import sys
 import threading
 from types import FrameType
-from typing import Any, Callable
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 

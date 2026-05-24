@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 import requests
 
@@ -37,7 +36,7 @@ class VLLMClient(LLMClient):
     def infer(self, request: LLMRequest) -> LLMResponse:
         """Execute inference via OpenAI-compatible /v1/chat/completions."""
         start_time = time.time()
-        
+
         payload = {
             "model": request.model,
             "messages": request.messages,
@@ -61,13 +60,13 @@ class VLLMClient(LLMClient):
                     tokens_used=0,
                     latency_ms=(time.time() - start_time) * 1000,
                 )
-            
+
             data = response.json()
             choice = data.get("choices", [{}])[0]
             content = choice.get("message", {}).get("content", "")
             usage = data.get("usage", {})
             tokens = usage.get("completion_tokens", 0)
-            
+
             return LLMResponse(
                 model=request.model,
                 message_content=content,
@@ -75,7 +74,7 @@ class VLLMClient(LLMClient):
                 tokens_used=tokens,
                 latency_ms=(time.time() - start_time) * 1000,
             )
-        except Exception as e:
+        except Exception:
             return LLMResponse(
                 model=request.model,
                 message_content="",

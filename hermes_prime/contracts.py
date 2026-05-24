@@ -12,7 +12,6 @@ from .utils import (
     hash_struct,
     is_urn_uuid,
     parse_iso8601,
-    new_urn_uuid,
 )
 from .utils import scope_prefix
 

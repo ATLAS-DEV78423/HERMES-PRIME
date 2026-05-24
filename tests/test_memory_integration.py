@@ -127,7 +127,7 @@ class TestMemoryIntegration(unittest.TestCase):
         llm.workspace_root = str(self.tmp)
 
         # run executor; it should recall the previous claim and include it in the user prompt
-        result = executor.execute(task_prompt="analysis: repository review and propose next step", model="mistral")
+        executor.execute(task_prompt="analysis: repository review and propose next step", model="mistral")
 
         self.assertIsNotNone(llm.last_request)
         # user message should contain the recalled claim text

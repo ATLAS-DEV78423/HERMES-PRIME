@@ -1,8 +1,6 @@
 import time
-import sys
 from typing import Callable
 
-from .theme import HermesColor, HermesStyle
 
 
 def boot_sequence(
@@ -21,7 +19,6 @@ def boot_sequence(
     print_fn("\n[ INITIALIZING HERMES-PRIME ]\n")
     for i in range(len(lines)):
         for j, (label, status) in enumerate(lines):
-            marker = " [.]" if j > i else (" [.]" if j == i else " [\u2713]")
             if j < i:
                 print_fn(f"  {label} ............. ONLINE")
             elif j == i:
@@ -39,7 +36,7 @@ def boot_sequence(
     print_fn("\n[ INITIALIZING HERMES-PRIME ]\n")
     for label, _ in lines:
         print_fn(f"  {label} ............. ONLINE")
-    print_fn(f"\n  SYSTEM STATUS :: OPERATIONAL\n")
+    print_fn("\n  SYSTEM STATUS :: OPERATIONAL\n")
 
 
 def pulse_loader(

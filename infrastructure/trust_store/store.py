@@ -4,7 +4,7 @@ import json
 import sqlite3
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any, Iterable, Optional, TypeVar
+from typing import Any
 
 from hermes_prime.contracts import (
     AuditTrace,
@@ -17,7 +17,7 @@ from hermes_prime.contracts import (
     TrustState,
     trust_transition_allowed,
 )
-from hermes_prime.utils import canonical_json, parse_iso8601, utc_now_iso
+from hermes_prime.utils import canonical_json, utc_now_iso
 
 
 class TrustStoreError(RuntimeError):

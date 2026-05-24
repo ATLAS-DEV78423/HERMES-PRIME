@@ -15,6 +15,7 @@ CI / Automation:
 - Ensure tests exercise Sentinel rejection paths and memory attestation attachments.
 
 Runtime Recommendations:
+- Run `hermes doctor` after install or upgrade; use `hermes repair` for auto-fixable workspace issues.
 - Run `hermes-prime` inside an isolated container with filesystem quotas and limited network egress.
 - Provide a dedicated secrets backend (e.g., Vault) for production signing keys.
 - Monitor audit logs for unusual capability mint patterns or repeated Sentinel rejects.

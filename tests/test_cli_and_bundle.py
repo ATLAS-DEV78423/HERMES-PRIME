@@ -81,9 +81,9 @@ class CliAndBundleTests(unittest.TestCase):
         self.assertEqual(code, 0)
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["workspace_root"], str(self.root))
+        self.assertIn("checks", payload)
+        self.assertIn("healthy", payload)
         self.assertIn("readiness", payload)
-        self.assertIn("bundle", payload["readiness"])
-        self.assertIn("backend_readiness", payload["readiness"])
 
     def test_cli_patch_commit_json(self) -> None:
         sample = self.root / "sample.txt"

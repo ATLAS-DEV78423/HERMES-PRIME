@@ -52,11 +52,37 @@ curl -sSL https://raw.githubusercontent.com/ATLAS-DEV78423/HERMES-PRIME/v0.2.1/i
    pip install -e .
    ```
 
-3. **Verify Installation:**
-   Check the readiness of your fallback backends and local toolchains.
+3. **Verify installation:**
    ```bash
-   hermes-prime doctor
+   hermes doctor
+   hermes repair    # if doctor reports fixable issues
+   hermes doctor    # confirm healthy
    ```
+
+   The `hermes` command is the recommended CLI name (`hermes-prime` and `sentinel` are aliases).
+
+---
+
+## System health (`doctor` & `repair`)
+
+Hermes can diagnose and repair its own workspace automatically.
+
+| Command | Purpose |
+|---------|---------|
+| `hermes doctor` | Check backends, policy bundle, databases, and dependencies |
+| `hermes repair` | Create `.hermes-prime/`, init SQLite stores, fix layout issues |
+
+```bash
+hermes doctor              # human-readable report
+hermes doctor --strict     # exit 1 on errors (for CI/scripts)
+hermes doctor --json       # machine-readable output
+
+hermes repair              # apply safe fixes
+hermes repair --dry-run    # preview without changes
+hermes repair --force      # rebuild corrupt DBs (backs up first)
+```
+
+See the [Setup Manual](docs/setup.md) and [Usage Manual](docs/usage.md) for full details.
 
 ---
 
@@ -65,6 +91,9 @@ curl -sSL https://raw.githubusercontent.com/ATLAS-DEV78423/HERMES-PRIME/v0.2.1/i
 HERMES-PRIME provides a secure CLI built around explicit intent delegation and capability minting. 
 
 ```bash
+# 0. Check system health (recommended first step)
+hermes doctor
+
 # 1. Inspect the loaded Sentinel policy bundle
 hermes-prime inspect --json
 
@@ -89,10 +118,19 @@ hermes-prime --prompt "read sample"
 
 ## Documentation
 
-The `hermes/` directory contains the complete doctrine, invariants, gates, and architecture decisions for the project. Start here:
-* [FOUNDATIONAL_PRIMITIVES.md](hermes/FOUNDATIONAL_PRIMITIVES.md) - The core philosophy.
-* [CLI_IDENTITY.md](hermes/CLI_IDENTITY.md) - The visual and operational tone guidelines.
-* [SCHEMA_REGISTRY.md](hermes/SCHEMA_REGISTRY.md) - The strict boundary types.
+### Operator manuals (`docs/`)
+
+* [Setup Manual](docs/setup.md) — installation, verification, troubleshooting
+* [Usage Manual](docs/usage.md) — CLI reference (`doctor`, `repair`, mint, memory, agents, …)
+* [Memory Governance](docs/memory_governance.md) — memory fabric and trust tiers
+* [Guardrails](docs/guardrails.md) — security and runtime recommendations
+* [Documentation index](docs/index.md) — full doc map
+
+### Architecture & doctrine (`hermes/`)
+
+* [FOUNDATIONAL_PRIMITIVES.md](FOUNDATIONAL_PRIMITIVES.md) — core philosophy
+* [CLI_IDENTITY.md](hermes/CLI_IDENTITY.md) — visual and operational tone
+* [SCHEMA_REGISTRY.md](hermes/SCHEMA_REGISTRY.md) — strict boundary types
 
 ## Upstream Infrastructure & Submodules
 

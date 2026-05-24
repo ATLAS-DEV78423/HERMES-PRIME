@@ -13,12 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build docs site from README
+      - name: Build docs site
         run: |
-          mkdir -p _site
+          mkdir -p _site/docs
           cp README.md _site/index.md
           cp LICENSE _site/LICENSE
+          cp docs/*.md _site/docs/
           echo "theme: jekyll-theme-midnight" > _site/_config.yml
+          echo "title: Hermes Prime" >> _site/_config.yml
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

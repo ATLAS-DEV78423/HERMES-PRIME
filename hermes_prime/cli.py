@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -60,11 +59,29 @@ def build_parser() -> argparse.ArgumentParser:
     g_import_parser = graphify_sub.add_parser("import", help="Import graphify graph into KnowledgeGraph")
     g_import_parser.add_argument("--graph-path", default=None, help="Path to graph.json")
 
-    doctor_parser = subparsers.add_parser("doctor", help="Check local backend readiness")
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Diagnose Hermes Prime installation and workspace health",
+    )
     doctor_parser.add_argument(
         "--strict",
         action="store_true",
-        help="Exit non-zero if critical backends are missing",
+        help="Exit non-zero if any ERROR-level issues are found",
+    )
+
+    repair_parser = subparsers.add_parser(
+        "repair",
+        help="Repair auto-fixable Hermes Prime workspace issues",
+    )
+    repair_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be fixed without making changes",
+    )
+    repair_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Rebuild corrupted SQLite databases (backs up first)",
     )
 
     subparsers.add_parser("inspect", help="Inspect the Sentinel bundle")
@@ -203,7 +220,10 @@ def main(argv: list[str] | None = None) -> int:
     install_signal_handlers()
 
     if argv is not None and "--prompt" not in argv and "--autonomous" not in argv:
-        commands = {"doctor", "inspect", "mint", "evaluate", "patch", "replay", "models", "run", "memory", "agents", "dashboard", "tui"}
+        commands = {
+            "doctor", "repair", "inspect", "mint", "evaluate", "patch", "replay",
+            "models", "run", "memory", "agents", "dashboard", "tui",
+        }
         non_option_tokens = [token for token in argv if token and not token.startswith("-")]
         if len(non_option_tokens) == 1 and non_option_tokens[0] not in commands:
             argv = list(argv) + ["--prompt", non_option_tokens[0]]
@@ -227,46 +247,43 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         if args.command == "doctor":
-            bundle = PolicyBundle(policy_root)
-            readiness = bundle.readiness()
-            memory_path = args.memory_backend_config or workspace_path / ".hermes-prime" / "memory.db"
-            memory_ok = Path(memory_path).parent.exists()
+            from hermes_prime.system_doctor import format_doctor_text, run_doctor
 
-            vault_check: dict[str, Any] = {"available": False}
-            try:
-                from hermes_prime.vault.vault_client import VaultClient
-                vc = VaultClient(fallback_env_prefix="HERMES_")
-                vault_check = vc.health()
-            except Exception:
-                pass
-
-            python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-            report = {
-                "workspace_root": workspace,
-                "hermes_prime_version": "0.2.0",
-                "python_version": python_version,
-                "policy_root": policy_root,
-                "readiness": readiness,
-                "trust_store": str(trust_path),
-                "memory_backend": str(memory_path),
-                "memory_storage_ready": memory_ok,
-                "vault": vault_check,
-            }
+            doctor_report = run_doctor(workspace_path)
+            memory_path = workspace_path / ".hermes-prime" / "memory.db"
+            payload = doctor_report.to_dict()
+            payload["trust_store"] = str(trust_path)
+            payload["memory_backend"] = str(memory_path)
+            payload["policy_root"] = policy_root
             if args.json:
-                _emit(report, True)
+                _emit(payload, True)
             else:
-                status = "ready" if readiness["ready"] else "not ready"
-                print(f"Hermes Prime v{report['hermes_prime_version']} — {status}")
-                print(f"  Python: {python_version}")
-                print(f"  Workspace: {workspace}")
-                if readiness["critical_missing"]:
-                    print(f"  Missing critical backends: {', '.join(readiness['critical_missing'])}")
-                print(f"  Policy bundle: {readiness['bundle']['bundle_root']}")
-                print(f"  Trust store: {trust_path}")
-                print(f"  Memory storage: {'ready' if memory_ok else 'unavailable'}")
-                vault_status = "available" if vault_check.get("available") else "not available"
-                print(f"  Vault: {vault_status}")
-            return 0 if readiness["ready"] or not args.strict else 1
+                print(format_doctor_text(doctor_report))
+            if args.strict and not doctor_report.healthy:
+                return 1
+            return 0
+
+        if args.command == "repair":
+            from hermes_prime.system_doctor import format_repair_text, run_repair
+
+            repair_report = run_repair(
+                workspace_path,
+                dry_run=args.dry_run,
+                force_db_reset=args.force,
+            )
+            payload: dict[str, Any] = repair_report.to_dict()
+            if not args.dry_run:
+                from hermes_prime.system_doctor import run_doctor
+
+                payload["post_repair"] = run_doctor(workspace_path).to_dict()
+            if args.json:
+                _emit(payload, True)
+            else:
+                print(format_repair_text(repair_report))
+                if not args.dry_run and not payload.get("post_repair", {}).get("healthy", True):
+                    print("\nSome issues remain. Re-run: hermes doctor")
+            failed = [a for a in repair_report.actions if a.applied and not a.success]
+            return 1 if failed else 0
 
         if args.command == "inspect":
             bundle = PolicyBundle(policy_root).manifest()

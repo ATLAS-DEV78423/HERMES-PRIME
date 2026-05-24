@@ -1,14 +1,41 @@
 # Hermes Prime Documentation
 
-Welcome to the Hermes Prime documentation site. This site is deployed via GitHub Pages and contains user guides, architecture decisions, and operational runbooks.
+Hermes Prime is a local-first governance engine for autonomous AI operations. This site contains operator and developer documentation.
 
-See the repository README for quickstart instructions and developer onboarding.
+## Manuals
 
-## Contents
+| Guide | Description |
+|-------|-------------|
+| [Setup Manual](setup.md) | Install, verify, and troubleshoot your environment |
+| [Usage Manual](usage.md) | CLI reference including **`hermes doctor`** and **`hermes repair`** |
+| [Memory Governance](memory_governance.md) | Memory fabric design and trust tiers |
+| [Guardrails](guardrails.md) | Security and operational guidelines |
 
-- Overview
-- Quickstart
-- API Reference (TODO)
+## Quick reference
 
---
-This page is automatically generated and deployed from the `docs/` directory.
+```bash
+# Install
+pip install -e ".[dev]"
+
+# Health check and self-repair
+hermes doctor
+hermes repair
+
+# Governance
+hermes inspect --json
+hermes mint --scope . --issued-to me --capability cap:file-read:scoped --actions filesystem.read
+```
+
+## Architecture (repository)
+
+Deep design docs live under [`hermes/`](../hermes/):
+
+- [Foundational Primitives](../FOUNDATIONAL_PRIMITIVES.md)
+- [CLI Identity](../hermes/CLI_IDENTITY.md)
+- [Schema Registry](../hermes/SCHEMA_REGISTRY.md)
+- [Threat Model](../hermes/THREAT_MODEL.md)
+
+## Project links
+
+- [GitHub Repository](https://github.com/ATLAS-DEV78423/HERMES-PRIME)
+- [README / Overview](../README.md)

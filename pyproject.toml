@@ -63,6 +63,7 @@ dev = [
 # all = ["llm", "memory", "tui", "vault", "dev"]
 [project.scripts]
 hermes-prime = "hermes_prime.cli:main"
+hermes = "hermes_prime.cli:main"
 sentinel = "hermes_prime.cli:main"
 
 [tool.setuptools]

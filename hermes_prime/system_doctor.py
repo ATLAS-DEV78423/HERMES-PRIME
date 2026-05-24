@@ -605,7 +605,7 @@ def format_doctor_text(report: DoctorReport) -> str:
     if report.fixable_count:
         lines.append(f"  Auto-fixable issues: {report.fixable_count} (run: hermes repair)")
 
-    by_severity = {Severity.ERROR: [], Severity.WARNING: [], Severity.INFO: [], Severity.OK: []}
+    by_severity: dict[Severity, list[CheckResult]] = {Severity.ERROR: [], Severity.WARNING: [], Severity.INFO: [], Severity.OK: []}
     for check in report.checks:
         if check.severity == Severity.OK:
             continue

@@ -271,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
                 dry_run=args.dry_run,
                 force_db_reset=args.force,
             )
-            payload: dict[str, Any] = repair_report.to_dict()
+            payload = repair_report.to_dict()
             if not args.dry_run:
                 from hermes_prime.system_doctor import run_doctor
 

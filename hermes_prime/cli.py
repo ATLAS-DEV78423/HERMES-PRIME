@@ -2,8 +2,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
+
+# Add upstream hermes-agent to sys.path so we can import AIAgent, HermesCLI, gateway, etc.
+_HERMES_AGENT_PATH = str(
+    Path(__file__).resolve().parent.parent / "external" / "hermes-agent"
+)
+if _HERMES_AGENT_PATH not in sys.path:
+    sys.path.insert(0, _HERMES_AGENT_PATH)
 
 from core.hermes_agent.orchestrator import HermesPrimeOrchestrator
 from hermes_prime.contracts import (
@@ -259,6 +267,25 @@ def build_parser() -> argparse.ArgumentParser:
     tui_sub.add_parser("console", help="Display operator console")
     tui_sub.add_parser("telemetry", help="Display telemetry header")
     tui_sub.add_parser("boot", help="Run boot sequence animation")
+
+    # Phase 5: Interactive chat and gateway
+    chat_parser = subparsers.add_parser(
+        "chat",
+        help="Start interactive Sentinel-governed chat session",
+    )
+    chat_parser.add_argument("--model", default="mistral", help="LLM model name")
+    chat_parser.add_argument("--scope", default=".", help="Workspace scope path")
+    chat_parser.add_argument("--context", help="Initial system context override")
+
+    gw_parser = subparsers.add_parser(
+        "gateway",
+        help="Start messaging gateway (Slack, Discord, Telegram)",
+    )
+    gw_parser.add_argument(
+        "--platforms",
+        default="slack",
+        help="Comma-separated platform list (slack, discord, telegram)",
+    )
 
     return parser
 
@@ -1309,6 +1336,20 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 parser.error("unknown graphify command")
             return 0
+
+        if args.command == "chat":
+            from hermes_prime.orch.governed_cli import run_governed_chat
+            return run_governed_chat(
+                model=args.model,
+                scope=args.scope,
+                context=args.context,
+            )
+
+        if args.command == "gateway":
+            from hermes_prime.gateway.governed_gateway import run_governed_gateway
+            return run_governed_gateway(
+                platforms=args.platforms.split(","),
+            )
 
         if args.prompt is None:
             parser.error("prompt is required when no subcommand is provided")

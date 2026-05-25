@@ -49,3 +49,33 @@ def test_hp_command_does_not_trigger_upstream():
         from hermes_prime.cli import main
         main(["graphify", "status"])
         mock_upstream.assert_not_called()
+
+
+def test_known_hp_set_has_all_registered_subcommands():
+    """Every subcommand registered in build_parser should be in known_hp_commands."""
+    from hermes_prime.cli import build_parser, known_hp_commands
+    parser = build_parser()
+    registered = set()
+    for action in parser._actions:
+        if hasattr(action, "_name_parser_map"):
+            registered.update(action._name_parser_map.keys())
+    missing = registered - known_hp_commands
+    assert not missing, f"Registered subcommands missing from known_hp_commands: {missing}"
+
+
+def test_known_hp_set_does_not_contain_upstream_commands():
+    """known_hp_commands should NOT contain upstream-only commands."""
+    from hermes_prime.cli import known_hp_commands
+    upstream_only = ["setup", "model", "cron", "kanban", "skills", "tools",
+                     "profile", "plugins", "auth", "backup", "bundle",
+                     "sessions", "version", "update", "checkpoints"]
+    for cmd in upstream_only:
+        assert cmd not in known_hp_commands, f"{cmd} should NOT be in known_hp_commands"
+
+
+def test_upstream_module_importable():
+    """Verify the upstream hermes_cli module is accessible on sys.path."""
+    import importlib
+    assert importlib.util.find_spec("hermes_cli") is not None, (
+        "hermes_cli not importable — check external/hermes-agent/ on sys.path"
+    )

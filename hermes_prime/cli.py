@@ -339,6 +339,34 @@ def main(argv: list[str] | None = None) -> int:
 
     if not cmd:
         try:
+            from hermes_prime.orch.governance_hooks import GovernanceHooks
+            hooks = GovernanceHooks(sentinel, vault, trust_store, workspace)
+            if argv and isinstance(argv, list):
+                _first = argv[0]
+                if _first == "cron":
+                    try:
+                        import cron.scheduler as _cs
+                        hooks.apply_cron_hook(_cs)
+                    except ImportError:
+                        pass
+                elif _first == "tools":
+                    try:
+                        import hermes_cli.tools_config as _tc
+                        if hasattr(_tc, 'toggle_tool'):
+                            _tc.toggle_tool = hooks.wrap("tools", _tc.toggle_tool)
+                    except ImportError:
+                        pass
+                elif _first == "skills":
+                    try:
+                        import hermes_cli.skills_config as _sc
+                        if hasattr(_sc, 'install_skill'):
+                            _sc.install_skill = hooks.wrap("skills", _sc.install_skill)
+                    except ImportError:
+                        pass
+        except Exception:
+            pass  # GovernanceHooks not available; passthrough without hooks
+
+        try:
             import hermes_cli.main as upstream_main
         except ImportError:
             print("hermes: upstream hermes-agent not available. Check external/hermes-agent/ path.")

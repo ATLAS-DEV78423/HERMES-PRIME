@@ -26,6 +26,8 @@ class ActionType(str, Enum):
     AGENT_SPAWN = "agent.spawn"
     AGENT_KILL = "agent.kill"
     CAPABILITY_REQUEST = "capability.request"
+    SCHEDULING = "scheduling"
+    CONFIG_WRITE = "config.write"
 
 
 class RiskTier(str, Enum):

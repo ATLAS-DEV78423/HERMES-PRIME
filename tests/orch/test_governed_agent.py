@@ -72,3 +72,32 @@ def test_audit_trace_stored_on_approval(mock_infrastructure):
         ra.handle_function_call = mu.handle_function_call
         ra.handle_function_call("read", {"path": "test.txt"})
         assert trust_store.store_audit_trace.called
+
+
+def test_governed_agent_rejects_unauthorized_tool():
+    """End-to-end: governed agent rejects a tool call that violates policy."""
+    import json
+    from unittest.mock import Mock
+
+    from hermes_prime.orch.governed_agent import GovernedAgentWrapper
+
+    sentinel = Mock()
+    sentinel.evaluate.return_value.decision.to_dict.return_value = {
+        "permitted": False,
+        "blocking_layer": 1,
+        "denial_reason": "test: all actions denied",
+    }
+    vault = Mock()
+    vault.mint_capability.return_value.token_id = "test-token"
+    forge = Mock()
+    trust_store = Mock()
+
+    wrapper = GovernedAgentWrapper(sentinel, vault, forge, trust_store)
+    wrapper._patch_handle_function_call()
+
+    import run_agent as ra
+    result = ra.handle_function_call("read", {"path": "/etc/passwd"})
+    parsed = json.loads(result)
+    assert "rejected" in parsed["error"].lower()
+    assert sentinel.evaluate.called
+    assert vault.mint_capability.called

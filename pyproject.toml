@@ -104,6 +104,7 @@ exclude = [
     "claude-code-refrlow",
     "cognitive-trust",
     "hermes_prime.egg-info",
+    "obsidian_graphify_custom",
 ]
 
 [tool.ruff.lint]
@@ -113,6 +114,7 @@ ignore = ["E501"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["F401", "F841"]
 "**/__init__.py" = ["F401"]
+"hermes_prime/cli.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.10"

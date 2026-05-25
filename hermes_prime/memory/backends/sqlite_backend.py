@@ -128,9 +128,9 @@ class SQLiteMemoryBackend(MemoryBackend):
         return [MemoryClaim(**json.loads(row["payload"])) for row in rows]
 
     def delete(self, fact_id: str) -> bool:
-        self.conn.execute("DELETE FROM memory_claims WHERE fact_id = ?", (fact_id,))
+        cursor = self.conn.execute("DELETE FROM memory_claims WHERE fact_id = ?", (fact_id,))
         self.conn.commit()
-        return self.conn.total_changes > 0
+        return cursor.rowcount > 0
 
     def count(self) -> int:
         row = self.conn.execute("SELECT COUNT(*) AS cnt FROM memory_claims").fetchone()

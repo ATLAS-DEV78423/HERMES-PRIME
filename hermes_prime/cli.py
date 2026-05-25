@@ -326,8 +326,9 @@ def main(argv: list[str] | None = None) -> int:
     install_signal_handlers()
     import importlib.util as _iu
     if _iu.find_spec("hermes_cli") is not None:
-        print("! conflicting `hermes` CLI: both hermes-prime and hermes-agent are installed.", flush=True)
-        print("! Use `hermes-prime` instead of `hermes` to ensure this package runs.", flush=True)
+        import sys as _sys
+        print("! conflicting `hermes` CLI: both hermes-prime and hermes-agent are installed.", file=_sys.stderr, flush=True)
+        print("! Use `hermes-prime` instead of `hermes` to ensure this package runs.", file=_sys.stderr, flush=True)
 
     if argv is not None and "--prompt" not in argv and "--autonomous" not in argv:
         non_option_tokens = [token for token in argv if token and not token.startswith("-")]
@@ -337,59 +338,62 @@ def main(argv: list[str] | None = None) -> int:
     args, _ = parser.parse_known_args(argv)
     cmd = vars(args).get("command")
 
-    if not cmd:
-        try:
-            from hermes_prime.orch.governance_hooks import GovernanceHooks
-            hooks = GovernanceHooks(sentinel, vault, trust_store, workspace)
-            if argv and isinstance(argv, list):
-                _first = argv[0]
-                if _first == "cron":
-                    try:
-                        import cron.scheduler as _cs
-                        hooks.apply_cron_hook(_cs)
-                    except ImportError:
-                        pass
-                elif _first == "tools":
-                    try:
-                        import hermes_cli.tools_config as _tc
-                        if hasattr(_tc, 'toggle_tool'):
-                            _tc.toggle_tool = hooks.wrap("tools", _tc.toggle_tool)
-                    except ImportError:
-                        pass
-                elif _first == "skills":
-                    try:
-                        import hermes_cli.skills_config as _sc
-                        if hasattr(_sc, 'install_skill'):
-                            _sc.install_skill = hooks.wrap("skills", _sc.install_skill)
-                    except ImportError:
-                        pass
-        except Exception:
-            pass  # GovernanceHooks not available; passthrough without hooks
-
-        try:
-            import hermes_cli.main as upstream_main
-        except ImportError:
-            print("hermes: upstream hermes-agent not available. Check external/hermes-agent/ path.")
-            return 1
-        return upstream_main.main(argv)
-
-    workspace = str(Path(args.workspace).resolve())
+    workspace = str(Path(args.workspace if hasattr(args, 'workspace') else '.').resolve())
     workspace_path = Path(workspace)
     fabric_root = args.fabric_root or str(workspace_path / "external" / "fabric")
     policy_root = str(workspace_path / "infrastructure" / "policy_engine")
     trust_path = workspace_path / ".hermes-prime" / "trust.db"
     trust_store = TrustStore(trust_path)
+    policy = PolicyEngine(PolicyContext(workspace_root=workspace))
+    vault = CapabilityVault(trust_store=trust_store)
+    sentinel = SentinelService(
+        workspace_root=workspace,
+        policy_root=policy_root,
+        trust_store=trust_store,
+        policy_engine=policy,
+    )
+
+    if not cmd:
+        if argv and isinstance(argv, list) and any(a in argv for a in ("--prompt", "--autonomous")):
+            cmd = "__prompt__"
+        else:
+            try:
+                from hermes_prime.orch.governance_hooks import GovernanceHooks
+                hooks = GovernanceHooks(sentinel, vault, trust_store, workspace)
+                if argv and isinstance(argv, list):
+                    _first = argv[0]
+                    if _first == "cron":
+                        try:
+                            import cron.scheduler as _cs
+                            hooks.apply_cron_hook(_cs)
+                        except ImportError:
+                            pass
+                    elif _first == "tools":
+                        try:
+                            import hermes_cli.tools_config as _tc
+                            if hasattr(_tc, 'toggle_tool'):
+                                _tc.toggle_tool = hooks.wrap("tools", _tc.toggle_tool)
+                        except ImportError:
+                            pass
+                    elif _first == "skills":
+                        try:
+                            import hermes_cli.skills_config as _sc
+                            if hasattr(_sc, 'install_skill'):
+                                _sc.install_skill = hooks.wrap("skills", _sc.install_skill)
+                        except ImportError:
+                            pass
+            except ImportError:
+                pass
+
+            try:
+                import hermes_cli.main as upstream_main
+            except ImportError:
+                print("hermes: upstream hermes-agent not available. Check external/hermes-agent/ path.")
+                return 1
+            return upstream_main.main()
 
     def handle_hp_command(args: argparse.Namespace) -> int:
         try:
-            policy = PolicyEngine(PolicyContext(workspace_root=workspace))
-            vault = CapabilityVault(trust_store=trust_store)
-            sentinel = SentinelService(
-                workspace_root=workspace,
-                policy_root=policy_root,
-                trust_store=trust_store,
-                policy_engine=policy,
-            )
 
             if args.command == "hp-doctor":
                 from hermes_prime.system_doctor import format_doctor_text, run_doctor

@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 
 def test_hp_doctor_subcommand_registered():
     from hermes_prime.cli import build_parser
@@ -30,3 +31,21 @@ def test_hp_dashboard_subcommand_registered():
     help_text = parser.format_help()
     assert "hp-dashboard" in help_text
     assert "dashboard" not in help_text or "hp-dashboard" in help_text
+
+
+def test_upstream_passthrough_invoked():
+    """When no subcommand given, upstream main() should be called."""
+    import hermes_prime.cli
+    with patch("hermes_cli.main.main") as mock_upstream:
+        from hermes_prime.cli import main
+        main([])
+        mock_upstream.assert_called_once()
+
+
+def test_hp_command_does_not_trigger_upstream():
+    """Known HP commands should NOT call upstream."""
+    import hermes_prime.cli
+    with patch("hermes_cli.main.main") as mock_upstream:
+        from hermes_prime.cli import main
+        main(["graphify", "status"])
+        mock_upstream.assert_not_called()

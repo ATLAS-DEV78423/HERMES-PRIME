@@ -30,12 +30,6 @@ from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.backends.mempalace_backend import MemPalaceBackend
 from hermes_prime.utils import new_urn_uuid, sha256_bytes, utc_now_iso
 from infrastructure.backends import BackendRegistry
-
-known_hp_commands = {
-    "graphify", "repair", "inspect", "mint", "evaluate", "patch", "replay",
-    "models", "run", "agents", "hp-dashboard", "tui", "learn", "brain",
-    "hp-doctor", "hp-memory", "chat", "gateway",
-}
 from infrastructure.policy_engine.bundle import PolicyBundle
 from infrastructure.policy_engine.engine import PolicyContext, PolicyEngine
 from infrastructure.policy_engine.sentinel_service import SentinelService
@@ -43,6 +37,11 @@ from infrastructure.sandboxed_forge.forge import SandboxedForge
 from infrastructure.trust_store import TrustStore
 from infrastructure.vault.capabilities import CapabilityVault
 
+known_hp_commands = {
+    "graphify", "repair", "inspect", "mint", "evaluate", "patch", "replay",
+    "models", "run", "agents", "hp-dashboard", "tui", "learn", "brain",
+    "hp-doctor", "hp-memory", "chat", "gateway",
+}
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Hermes Prime control plane")
@@ -339,7 +338,11 @@ def main(argv: list[str] | None = None) -> int:
     cmd = vars(args).get("command")
 
     if not cmd:
-        import hermes_cli.main as upstream_main
+        try:
+            import hermes_cli.main as upstream_main
+        except ImportError:
+            print("hermes: upstream hermes-agent not available. Check external/hermes-agent/ path.")
+            return 1
         return upstream_main.main(argv)
 
     workspace = str(Path(args.workspace).resolve())
@@ -348,1092 +351,1097 @@ def main(argv: list[str] | None = None) -> int:
     policy_root = str(workspace_path / "infrastructure" / "policy_engine")
     trust_path = workspace_path / ".hermes-prime" / "trust.db"
     trust_store = TrustStore(trust_path)
-    try:
-        policy = PolicyEngine(PolicyContext(workspace_root=workspace))
-        vault = CapabilityVault(trust_store=trust_store)
-        sentinel = SentinelService(
-            workspace_root=workspace,
-            policy_root=policy_root,
-            trust_store=trust_store,
-            policy_engine=policy,
-        )
 
-        if args.command == "hp-doctor":
-            from hermes_prime.system_doctor import format_doctor_text, run_doctor
-
-            doctor_report = run_doctor(workspace_path)
-            memory_path = workspace_path / ".hermes-prime" / "memory.db"
-            payload = doctor_report.to_dict()
-            payload["trust_store"] = str(trust_path)
-            payload["memory_backend"] = str(memory_path)
-            payload["policy_root"] = policy_root
-            if args.json:
-                _emit(payload, True)
-            else:
-                print(format_doctor_text(doctor_report))
-            if args.strict and not doctor_report.healthy:
-                return 1
-            return 0
-
-        if args.command == "repair":
-            from hermes_prime.system_doctor import format_repair_text, run_repair
-
-            repair_report = run_repair(
-                workspace_path,
-                dry_run=args.dry_run,
-                force_db_reset=args.force,
-            )
-            payload = repair_report.to_dict()
-            if not args.dry_run:
-                from hermes_prime.system_doctor import run_doctor
-
-                payload["post_repair"] = run_doctor(workspace_path).to_dict()
-            if args.json:
-                _emit(payload, True)
-            else:
-                print(format_repair_text(repair_report))
-                if not args.dry_run and not payload.get("post_repair", {}).get("healthy", True):
-                    print("\nSome issues remain. Re-run: hermes doctor")
-            failed = [a for a in repair_report.actions if a.applied and not a.success]
-            return 1 if failed else 0
-
-        if args.command == "inspect":
-            bundle = PolicyBundle(policy_root).manifest()
-            backends = BackendRegistry(workspace_path).manifest()
-            trace = AuditTrace(
-                trace_id=new_urn_uuid(),
-                trace_type="inspect",
-                created_at=utc_now_iso(),
+    def handle_hp_command(args: argparse.Namespace) -> int:
+        try:
+            policy = PolicyEngine(PolicyContext(workspace_root=workspace))
+            vault = CapabilityVault(trust_store=trust_store)
+            sentinel = SentinelService(
                 workspace_root=workspace,
-                mutation={"bundle_manifest": bundle, "backend_manifest": backends},
-                summary=f"Inspected policy bundle with {len(bundle.get('artifacts', []))} artifacts.",
+                policy_root=policy_root,
+                trust_store=trust_store,
+                policy_engine=policy,
             )
-            trust_store.store_audit_trace(trace)
-            if args.json:
-                _emit({"bundle": bundle, "backends": backends, "trace_id": trace.trace_id}, True)
-            else:
-                print(
-                    f"Sentinel bundle: {bundle['bundle_root']} ({len(bundle['artifacts'])} artifacts)"
+
+            if args.command == "hp-doctor":
+                from hermes_prime.system_doctor import format_doctor_text, run_doctor
+
+                doctor_report = run_doctor(workspace_path)
+                memory_path = workspace_path / ".hermes-prime" / "memory.db"
+                payload = doctor_report.to_dict()
+                payload["trust_store"] = str(trust_path)
+                payload["memory_backend"] = str(memory_path)
+                payload["policy_root"] = policy_root
+                if args.json:
+                    _emit(payload, True)
+                else:
+                    print(format_doctor_text(doctor_report))
+                if args.strict and not doctor_report.healthy:
+                    return 1
+                return 0
+
+            if args.command == "repair":
+                from hermes_prime.system_doctor import format_repair_text, run_repair
+
+                repair_report = run_repair(
+                    workspace_path,
+                    dry_run=args.dry_run,
+                    force_db_reset=args.force,
                 )
-                print(f"Backend preference: {backends['preferred']}")
-            return 0
+                payload = repair_report.to_dict()
+                if not args.dry_run:
+                    from hermes_prime.system_doctor import run_doctor
 
-        if args.command == "mint":
-            intent = vault.register_intent_root(scope=args.scope, issued_to=args.issued_to)
-            sentinel.register_intent_root(intent)
-            token = vault.mint_capability(
-                capability=args.capability,
-                scope=args.scope,
-                actions=args.actions,
-                risk_tier_ceiling=RiskTier(args.risk_tier_ceiling),
-                intent_root=intent.intent_root,
-                issued_to=args.issued_to,
-            )
-            trace = AuditTrace(
-                trace_id=new_urn_uuid(),
-                trace_type="mint",
-                created_at=utc_now_iso(),
-                workspace_root=workspace,
-                intent_root=intent.intent_root,
-                action={
-                    "scope": args.scope,
-                    "issued_to": args.issued_to,
-                    "capability": args.capability,
-                    "actions": list(args.actions),
-                    "risk_tier_ceiling": args.risk_tier_ceiling,
-                },
-                mutation={"intent_root": intent.to_dict(), "token": token.to_dict()},
-                summary=f"Minted capability {token.capability} for {args.issued_to}.",
-            )
-            trust_store.store_audit_trace(trace)
-            _emit({"intent_root": intent.to_dict(), "token": token.to_dict(), "trace_id": trace.trace_id}, args.json)
-            return 0
+                    payload["post_repair"] = run_doctor(workspace_path).to_dict()
+                if args.json:
+                    _emit(payload, True)
+                else:
+                    print(format_repair_text(repair_report))
+                    if not args.dry_run and not payload.get("post_repair", {}).get("healthy", True):
+                        print("\nSome issues remain. Re-run: hermes doctor")
+                failed = [a for a in repair_report.actions if a.applied and not a.success]
+                return 1 if failed else 0
 
-        if args.command == "evaluate":
-            intent = trust_store.get_intent_root(args.intent_root)
-            token = trust_store.get_capability_token(args.token_id)
-            if intent is None:
-                parser.error("unknown intent root")
-            if token is None:
-                parser.error("unknown capability token")
-            if token.intent_root != intent.intent_root:
-                parser.error("intent root and token do not match")
-            sentinel.register_intent_root(intent)
-            if token.capability != args.capability:
-                parser.error("capability mismatch")
-            action = ActionProposal(
-                action_id=new_urn_uuid(),
-                action_type=ActionType(args.action_type),
-                scope=args.scope,
-                risk_tier=RiskTier(args.risk_tier),
-                intent_root=intent.intent_root,
-                capability=token.capability,
-                proposed_at=args.proposed_at,
-                parameters=_parse_parameters(args.parameter),
-            )
-            evaluation = sentinel.evaluate(action, capability=token)
-            trace = AuditTrace(
-                trace_id=new_urn_uuid(),
-                trace_type="evaluation",
-                created_at=utc_now_iso(),
-                workspace_root=workspace,
-                intent_root=intent.intent_root,
-                action=action.to_dict(),
-                decision=evaluation.to_dict(),
-                summary=f"Evaluated {action.action_type.value} and {('permitted' if evaluation.decision.permitted else 'denied')}.",
-            )
-            trust_store.store_audit_trace(trace)
-            if args.json:
-                _emit({"evaluation": evaluation.to_dict(), "trace_id": trace.trace_id}, True)
-            else:
-                print(_humanize_decision(evaluation.decision.to_dict()))
-            return 0
+            if args.command == "inspect":
+                bundle = PolicyBundle(policy_root).manifest()
+                backends = BackendRegistry(workspace_path).manifest()
+                trace = AuditTrace(
+                    trace_id=new_urn_uuid(),
+                    trace_type="inspect",
+                    created_at=utc_now_iso(),
+                    workspace_root=workspace,
+                    mutation={"bundle_manifest": bundle, "backend_manifest": backends},
+                    summary=f"Inspected policy bundle with {len(bundle.get('artifacts', []))} artifacts.",
+                )
+                trust_store.store_audit_trace(trace)
+                if args.json:
+                    _emit({"bundle": bundle, "backends": backends, "trace_id": trace.trace_id}, True)
+                else:
+                    print(
+                        f"Sentinel bundle: {bundle['bundle_root']} ({len(bundle['artifacts'])} artifacts)"
+                    )
+                    print(f"Backend preference: {backends['preferred']}")
+                return 0
 
-        if args.command == "patch":
-            intent = trust_store.get_intent_root(args.intent_root)
-            token = trust_store.get_capability_token(args.token_id)
-            if intent is None:
-                parser.error("unknown intent root")
-            if token is None:
-                parser.error("unknown capability token")
-            if token.intent_root != intent.intent_root:
-                parser.error("intent root and token do not match")
-            sentinel.register_intent_root(intent)
-            if token.capability not in {"cap:file-write:scoped", "cap:general:scoped"}:
-                parser.error("capability token is not file-write capable")
+            if args.command == "mint":
+                intent = vault.register_intent_root(scope=args.scope, issued_to=args.issued_to)
+                sentinel.register_intent_root(intent)
+                token = vault.mint_capability(
+                    capability=args.capability,
+                    scope=args.scope,
+                    actions=args.actions,
+                    risk_tier_ceiling=RiskTier(args.risk_tier_ceiling),
+                    intent_root=intent.intent_root,
+                    issued_to=args.issued_to,
+                )
+                trace = AuditTrace(
+                    trace_id=new_urn_uuid(),
+                    trace_type="mint",
+                    created_at=utc_now_iso(),
+                    workspace_root=workspace,
+                    intent_root=intent.intent_root,
+                    action={
+                        "scope": args.scope,
+                        "issued_to": args.issued_to,
+                        "capability": args.capability,
+                        "actions": list(args.actions),
+                        "risk_tier_ceiling": args.risk_tier_ceiling,
+                    },
+                    mutation={"intent_root": intent.to_dict(), "token": token.to_dict()},
+                    summary=f"Minted capability {token.capability} for {args.issued_to}.",
+                )
+                trust_store.store_audit_trace(trace)
+                _emit({"intent_root": intent.to_dict(), "token": token.to_dict(), "trace_id": trace.trace_id}, args.json)
+                return 0
 
-            path_arg = Path(args.path)
-            target = path_arg if path_arg.is_absolute() else (workspace_path / path_arg)
-            target = target.resolve()
-            try:
-                target.relative_to(workspace_path)
-            except ValueError:
-                parser.error("patch path must stay within the workspace")
+            if args.command == "evaluate":
+                intent = trust_store.get_intent_root(args.intent_root)
+                token = trust_store.get_capability_token(args.token_id)
+                if intent is None:
+                    parser.error("unknown intent root")
+                if token is None:
+                    parser.error("unknown capability token")
+                if token.intent_root != intent.intent_root:
+                    parser.error("intent root and token do not match")
+                sentinel.register_intent_root(intent)
+                if token.capability != args.capability:
+                    parser.error("capability mismatch")
+                action = ActionProposal(
+                    action_id=new_urn_uuid(),
+                    action_type=ActionType(args.action_type),
+                    scope=args.scope,
+                    risk_tier=RiskTier(args.risk_tier),
+                    intent_root=intent.intent_root,
+                    capability=token.capability,
+                    proposed_at=args.proposed_at,
+                    parameters=_parse_parameters(args.parameter),
+                )
+                evaluation = sentinel.evaluate(action, capability=token)
+                trace = AuditTrace(
+                    trace_id=new_urn_uuid(),
+                    trace_type="evaluation",
+                    created_at=utc_now_iso(),
+                    workspace_root=workspace,
+                    intent_root=intent.intent_root,
+                    action=action.to_dict(),
+                    decision=evaluation.to_dict(),
+                    summary=f"Evaluated {action.action_type.value} and {('permitted' if evaluation.decision.permitted else 'denied')}.",
+                )
+                trust_store.store_audit_trace(trace)
+                if args.json:
+                    _emit({"evaluation": evaluation.to_dict(), "trace_id": trace.trace_id}, True)
+                else:
+                    print(_humanize_decision(evaluation.decision.to_dict()))
+                return 0
 
-            relative_path = target.relative_to(workspace_path).as_posix()
-            write_action = ActionProposal(
-                action_id=new_urn_uuid(),
-                action_type=ActionType.FILESYSTEM_WRITE,
-                scope=target.as_posix(),
-                risk_tier=RiskTier.T1,
-                intent_root=intent.intent_root,
-                capability=token.capability,
-                proposed_at=utc_now_iso(),
-                parameters={"path": relative_path, "content": args.content},
-            )
-            write_evaluation = sentinel.evaluate(write_action, capability=token)
-            forge = SandboxedForge(workspace)
+            if args.command == "patch":
+                intent = trust_store.get_intent_root(args.intent_root)
+                token = trust_store.get_capability_token(args.token_id)
+                if intent is None:
+                    parser.error("unknown intent root")
+                if token is None:
+                    parser.error("unknown capability token")
+                if token.intent_root != intent.intent_root:
+                    parser.error("intent root and token do not match")
+                sentinel.register_intent_root(intent)
+                if token.capability not in {"cap:file-write:scoped", "cap:general:scoped"}:
+                    parser.error("capability token is not file-write capable")
 
-            def authorize(action: ActionProposal):
-                return sentinel.evaluate(action, capability=token).decision
+                path_arg = Path(args.path)
+                target = path_arg if path_arg.is_absolute() else (workspace_path / path_arg)
+                target = target.resolve()
+                try:
+                    target.relative_to(workspace_path)
+                except ValueError:
+                    parser.error("patch path must stay within the workspace")
 
-            session = forge.start_session(
-                intent_root=intent.intent_root,
-                capability=token.capability,
-                authorizer=authorize,
-            )
-            session.write_text(relative_path, args.content)
-            diff = session.diff(relative_path)
-            committed: list[str] = []
-            if args.commit:
-                committed = session.commit()
-                for committed_rel in committed:
-                    committed_path = workspace_path / committed_rel
-                    if committed_path.exists():
-                        provenance = ProvenanceAttestation(
-                            attestation_id=new_urn_uuid(),
-                            artifact_hash=sha256_bytes(committed_path.read_bytes()),
-                            artifact_type="file",
-                            generated_by="forge",
-                            model_id="forge:local",
-                            intent_root=intent.intent_root,
-                            parent_attestation_ids=[],
-                            input_attestation_ids=[],
-                            generated_at=utc_now_iso(),
-                            lifecycle_state=LifecycleState.COMMITTED,
-                            signature="sig:local",
-                        )
-                        trust_store.store_provenance_attestation(provenance)
-            trace = AuditTrace(
-                trace_id=new_urn_uuid(),
-                trace_type="patch_flow",
-                created_at=utc_now_iso(),
-                workspace_root=workspace,
-                intent_root=intent.intent_root,
-                action=write_action.to_dict(),
-                decision=write_evaluation.to_dict(),
-                mutation={
-                    "target": relative_path,
+                relative_path = target.relative_to(workspace_path).as_posix()
+                write_action = ActionProposal(
+                    action_id=new_urn_uuid(),
+                    action_type=ActionType.FILESYSTEM_WRITE,
+                    scope=target.as_posix(),
+                    risk_tier=RiskTier.T1,
+                    intent_root=intent.intent_root,
+                    capability=token.capability,
+                    proposed_at=utc_now_iso(),
+                    parameters={"path": relative_path, "content": args.content},
+                )
+                write_evaluation = sentinel.evaluate(write_action, capability=token)
+                forge = SandboxedForge(workspace)
+
+                def authorize(action: ActionProposal):
+                    return sentinel.evaluate(action, capability=token).decision
+
+                session = forge.start_session(
+                    intent_root=intent.intent_root,
+                    capability=token.capability,
+                    authorizer=authorize,
+                )
+                session.write_text(relative_path, args.content)
+                diff = session.diff(relative_path)
+                committed: list[str] = []
+                if args.commit:
+                    committed = session.commit()
+                    for committed_rel in committed:
+                        committed_path = workspace_path / committed_rel
+                        if committed_path.exists():
+                            provenance = ProvenanceAttestation(
+                                attestation_id=new_urn_uuid(),
+                                artifact_hash=sha256_bytes(committed_path.read_bytes()),
+                                artifact_type="file",
+                                generated_by="forge",
+                                model_id="forge:local",
+                                intent_root=intent.intent_root,
+                                parent_attestation_ids=[],
+                                input_attestation_ids=[],
+                                generated_at=utc_now_iso(),
+                                lifecycle_state=LifecycleState.COMMITTED,
+                                signature="sig:local",
+                            )
+                            trust_store.store_provenance_attestation(provenance)
+                trace = AuditTrace(
+                    trace_id=new_urn_uuid(),
+                    trace_type="patch_flow",
+                    created_at=utc_now_iso(),
+                    workspace_root=workspace,
+                    intent_root=intent.intent_root,
+                    action=write_action.to_dict(),
+                    decision=write_evaluation.to_dict(),
+                    mutation={
+                        "target": relative_path,
+                        "diff": diff,
+                        "committed": committed,
+                        "journal": [entry.__dict__ for entry in session.journal.entries],
+                    },
+                    summary=f"Patch {relative_path} {'committed' if committed else 'staged'} with Sentinel authorization.",
+                )
+                trust_store.store_audit_trace(trace)
+                payload = {
+                    "evaluation": write_evaluation.to_dict(),
                     "diff": diff,
                     "committed": committed,
-                    "journal": [entry.__dict__ for entry in session.journal.entries],
-                },
-                summary=f"Patch {relative_path} {'committed' if committed else 'staged'} with Sentinel authorization.",
-            )
-            trust_store.store_audit_trace(trace)
-            payload = {
-                "evaluation": write_evaluation.to_dict(),
-                "diff": diff,
-                "committed": committed,
-                "target": relative_path,
-                "trace_id": trace.trace_id,
-            }
-            if args.json:
-                _emit(payload, True)
-            else:
-                print(
-                    f"{relative_path}: {'committed' if committed else 'staged'} "
-                    f"({ _humanize_decision(write_evaluation.decision.to_dict()) })"
-                )
-            return 0
-
-        if args.command == "replay":
-            if args.trace_id:
-                trace = trust_store.get_audit_trace(args.trace_id)
-                if trace is None:
-                    parser.error("unknown trace id")
-                payload = trace.to_dict()
-            else:
-                traces = trust_store.list_audit_traces(limit=max(args.limit, 1))
-                payload = [trace.to_dict() for trace in traces]
-            replay_trace = AuditTrace(
-                trace_id=new_urn_uuid(),
-                trace_type="replay",
-                created_at=utc_now_iso(),
-                workspace_root=workspace,
-                action={"trace_id": args.trace_id, "limit": args.limit},
-                mutation={"result_count": len(payload) if isinstance(payload, list) else 1},
-                summary=(
-                    f"Replayed trace {args.trace_id}" if args.trace_id else f"Listed {args.limit} audit traces"
-                ),
-            )
-            trust_store.store_audit_trace(replay_trace)
-            if args.json:
-                _emit({"replay": payload, "trace_id": replay_trace.trace_id}, True)
-            else:
-                if isinstance(payload, list):
-                    for trace in payload:
-                        print(f"{trace['trace_type']} {trace['trace_id']}: {trace['summary']}")
+                    "target": relative_path,
+                    "trace_id": trace.trace_id,
+                }
+                if args.json:
+                    _emit(payload, True)
                 else:
-                    print(f"{payload['trace_type']} {payload['trace_id']}: {payload['summary']}")
-            return 0
+                    print(
+                        f"{relative_path}: {'committed' if committed else 'staged'} "
+                        f"({ _humanize_decision(write_evaluation.decision.to_dict()) })"
+                    )
+                return 0
 
-        # Phase 2: Memory Fabric commands
-        if args.command == "hp-memory":
-            if args.memory_backend == "mempalace":
-                palace_path = args.memory_backend_config or str(workspace_path / ".hermes-prime" / "palace")
-                memory_store = MemoryStore(
-                    backend=MemPalaceBackend(palace_path=palace_path),
-                    depth_policy=DepthPolicy(),
-                )
-            elif args.memory_backend == "graphify":
-                from hermes_prime.memory.backends.graphify_backend import GraphifyBackend
-                memory_store = MemoryStore(
-                    backend=GraphifyBackend(workspace_path=workspace),
-                    depth_policy=DepthPolicy(),
-                )
-            else:
-                memory_store = MemoryStore(
-                    backend=SQLiteMemoryBackend(args.memory_backend_config or workspace_path / ".hermes-prime" / "memory.db"),
-                    depth_policy=DepthPolicy(),
-                )
-            mem_cmd = args.memory_command
-            if mem_cmd == "write":
-                intent = trust_store.get_intent_root(args.intent_root)
-                if intent is None:
-                    parser.error(f"unknown intent root: {args.intent_root}")
-                result = memory_store.write(
-                    claim_text=args.claim,
-                    source={"source": args.source, "command": "memory.write", "workspace": workspace},
-                    intent_root=intent,
-                    epistemic_confidence=min(max(args.confidence, 0.0), 1.0),
-                    source_trust=args.source_trust,
-                )
-                trace = AuditTrace(
+            if args.command == "replay":
+                if args.trace_id:
+                    trace = trust_store.get_audit_trace(args.trace_id)
+                    if trace is None:
+                        parser.error("unknown trace id")
+                    payload = trace.to_dict()
+                else:
+                    traces = trust_store.list_audit_traces(limit=max(args.limit, 1))
+                    payload = [trace.to_dict() for trace in traces]
+                replay_trace = AuditTrace(
                     trace_id=new_urn_uuid(),
-                    trace_type="memory_write",
+                    trace_type="replay",
                     created_at=utc_now_iso(),
                     workspace_root=workspace,
-                    intent_root=args.intent_root,
-                    action={"claim": args.claim, "confidence": args.confidence},
-                    decision={"success": result.success},
-                    mutation={"fact_id": result.fact_id, "attestation": result.attestation.to_dict() if result.attestation else None},
-                    summary=f"Memory write: {args.claim[:60]}...",
+                    action={"trace_id": args.trace_id, "limit": args.limit},
+                    mutation={"result_count": len(payload) if isinstance(payload, list) else 1},
+                    summary=(
+                        f"Replayed trace {args.trace_id}" if args.trace_id else f"Listed {args.limit} audit traces"
+                    ),
                 )
-                trust_store.store_audit_trace(trace)
+                trust_store.store_audit_trace(replay_trace)
                 if args.json:
-                    _emit({
-                        "success": result.success,
-                        "fact_id": result.fact_id,
-                        "attestation": result.attestation.to_dict() if result.attestation else None,
-                        "trace_id": trace.trace_id,
-                    }, True)
+                    _emit({"replay": payload, "trace_id": replay_trace.trace_id}, True)
                 else:
-                    if result.success:
-                        print(f"Memory written: {result.fact_id}")
+                    if isinstance(payload, list):
+                        for trace in payload:
+                            print(f"{trace['trace_type']} {trace['trace_id']}: {trace['summary']}")
                     else:
-                        print(f"Memory write failed: {result.error}")
-                return 0 if result.success else 1
+                        print(f"{payload['trace_type']} {payload['trace_id']}: {payload['summary']}")
+                return 0
 
-            elif mem_cmd == "recall":
-                result = memory_store.recall(args.query, limit=args.limit)
-                trace = AuditTrace(
-                    trace_id=new_urn_uuid(),
-                    trace_type="memory_recall",
-                    created_at=utc_now_iso(),
-                    workspace_root=workspace,
-                    action={"query": args.query, "limit": args.limit},
-                    mutation={"result_count": len(result.results)},
-                    summary=f"Memory recall: {args.query[:60]}... ({len(result.results)} results)",
-                )
-                trust_store.store_audit_trace(trace)
-                if args.json:
-                    _emit({
-                        "query": args.query,
-                        "results": [r.__dict__ for r in result.results],
-                        "trace_id": trace.trace_id,
-                    }, True)
+            # Phase 2: Memory Fabric commands
+            if args.command == "hp-memory":
+                if args.memory_backend == "mempalace":
+                    palace_path = args.memory_backend_config or str(workspace_path / ".hermes-prime" / "palace")
+                    memory_store = MemoryStore(
+                        backend=MemPalaceBackend(palace_path=palace_path),
+                        depth_policy=DepthPolicy(),
+                    )
+                elif args.memory_backend == "graphify":
+                    from hermes_prime.memory.backends.graphify_backend import GraphifyBackend
+                    memory_store = MemoryStore(
+                        backend=GraphifyBackend(workspace_path=workspace),
+                        depth_policy=DepthPolicy(),
+                    )
                 else:
-                    if not result.results:
-                        print("No matching memory claims found.")
+                    memory_store = MemoryStore(
+                        backend=SQLiteMemoryBackend(args.memory_backend_config or workspace_path / ".hermes-prime" / "memory.db"),
+                        depth_policy=DepthPolicy(),
+                    )
+                mem_cmd = args.memory_command
+                if mem_cmd == "write":
+                    intent = trust_store.get_intent_root(args.intent_root)
+                    if intent is None:
+                        parser.error(f"unknown intent root: {args.intent_root}")
+                    result = memory_store.write(
+                        claim_text=args.claim,
+                        source={"source": args.source, "command": "memory.write", "workspace": workspace},
+                        intent_root=intent,
+                        epistemic_confidence=min(max(args.confidence, 0.0), 1.0),
+                        source_trust=args.source_trust,
+                    )
+                    trace = AuditTrace(
+                        trace_id=new_urn_uuid(),
+                        trace_type="memory_write",
+                        created_at=utc_now_iso(),
+                        workspace_root=workspace,
+                        intent_root=args.intent_root,
+                        action={"claim": args.claim, "confidence": args.confidence},
+                        decision={"success": result.success},
+                        mutation={"fact_id": result.fact_id, "attestation": result.attestation.to_dict() if result.attestation else None},
+                        summary=f"Memory write: {args.claim[:60]}...",
+                    )
+                    trust_store.store_audit_trace(trace)
+                    if args.json:
+                        _emit({
+                            "success": result.success,
+                            "fact_id": result.fact_id,
+                            "attestation": result.attestation.to_dict() if result.attestation else None,
+                            "trace_id": trace.trace_id,
+                        }, True)
                     else:
-                        print(f"\nMemory Recall: {args.query}")
+                        if result.success:
+                            print(f"Memory written: {result.fact_id}")
+                        else:
+                            print(f"Memory write failed: {result.error}")
+                    return 0 if result.success else 1
+
+                elif mem_cmd == "recall":
+                    result = memory_store.recall(args.query, limit=args.limit)
+                    trace = AuditTrace(
+                        trace_id=new_urn_uuid(),
+                        trace_type="memory_recall",
+                        created_at=utc_now_iso(),
+                        workspace_root=workspace,
+                        action={"query": args.query, "limit": args.limit},
+                        mutation={"result_count": len(result.results)},
+                        summary=f"Memory recall: {args.query[:60]}... ({len(result.results)} results)",
+                    )
+                    trust_store.store_audit_trace(trace)
+                    if args.json:
+                        _emit({
+                            "query": args.query,
+                            "results": [r.__dict__ for r in result.results],
+                            "trace_id": trace.trace_id,
+                        }, True)
+                    else:
+                        if not result.results:
+                            print("No matching memory claims found.")
+                        else:
+                            print(f"\nMemory Recall: {args.query}")
+                            print(f"{'='*60}")
+                            for r in result.results:
+                                print(f"  [{r.tier}] {r.fact_id}")
+                                print(f"  Claim: {r.claim[:120]}")
+                                print(f"  Confidence: {r.epistemic_confidence:.2f}")
+                                print(f"  Trust: {r.source_trust} | State: {r.trust_state}")
+                                print()
+                    return 0
+
+                elif mem_cmd == "list":
+                    result = memory_store.list_all()
+                    trace = AuditTrace(
+                        trace_id=new_urn_uuid(),
+                        trace_type="memory_list",
+                        created_at=utc_now_iso(),
+                        workspace_root=workspace,
+                        mutation={"claim_count": result.total_count},
+                        summary=f"Listed {result.total_count} memory claims",
+                    )
+                    trust_store.store_audit_trace(trace)
+                    if args.json:
+                        _emit({
+                            "claims": [c.to_dict() for c in result.claims],
+                            "count": result.total_count,
+                            "trace_id": trace.trace_id,
+                        }, True)
+                    else:
+                        print(f"\nMemory Claims ({result.total_count} total)")
                         print(f"{'='*60}")
-                        for r in result.results:
-                            print(f"  [{r.tier}] {r.fact_id}")
-                            print(f"  Claim: {r.claim[:120]}")
-                            print(f"  Confidence: {r.epistemic_confidence:.2f}")
-                            print(f"  Trust: {r.source_trust} | State: {r.trust_state}")
+                        for c in result.claims:
+                            tier = c.tier.value if hasattr(c.tier, 'value') else c.tier
+                            state = c.trust_state.value if hasattr(c.trust_state, 'value') else c.trust_state
+                            print(f"  [{tier}] [{state}] {c.fact_id}")
+                            print(f"  {c.claim[:120]}")
                             print()
-                return 0
+                    return 0
 
-            elif mem_cmd == "list":
-                result = memory_store.list_all()
-                trace = AuditTrace(
-                    trace_id=new_urn_uuid(),
-                    trace_type="memory_list",
-                    created_at=utc_now_iso(),
-                    workspace_root=workspace,
-                    mutation={"claim_count": result.total_count},
-                    summary=f"Listed {result.total_count} memory claims",
-                )
-                trust_store.store_audit_trace(trace)
-                if args.json:
-                    _emit({
-                        "claims": [c.to_dict() for c in result.claims],
-                        "count": result.total_count,
-                        "trace_id": trace.trace_id,
-                    }, True)
-                else:
-                    print(f"\nMemory Claims ({result.total_count} total)")
-                    print(f"{'='*60}")
-                    for c in result.claims:
-                        tier = c.tier.value if hasattr(c.tier, 'value') else c.tier
-                        state = c.trust_state.value if hasattr(c.trust_state, 'value') else c.trust_state
-                        print(f"  [{tier}] [{state}] {c.fact_id}")
-                        print(f"  {c.claim[:120]}")
-                        print()
-                return 0
-
-            elif mem_cmd == "revoke":
-                result = memory_store.revoke(args.fact_id)
-                trace = AuditTrace(
-                    trace_id=new_urn_uuid(),
-                    trace_type="memory_revoke",
-                    created_at=utc_now_iso(),
-                    workspace_root=workspace,
-                    action={"fact_id": args.fact_id},
-                    decision={"success": result.success},
-                    summary=f"Memory revoke: {args.fact_id}",
-                )
-                trust_store.store_audit_trace(trace)
-                if args.json:
-                    _emit({"success": result.success, "fact_id": args.fact_id, "trace_id": trace.trace_id}, True)
-                else:
-                    if result.success:
-                        print(f"Memory claim revoked: {args.fact_id}")
+                elif mem_cmd == "revoke":
+                    result = memory_store.revoke(args.fact_id)
+                    trace = AuditTrace(
+                        trace_id=new_urn_uuid(),
+                        trace_type="memory_revoke",
+                        created_at=utc_now_iso(),
+                        workspace_root=workspace,
+                        action={"fact_id": args.fact_id},
+                        decision={"success": result.success},
+                        summary=f"Memory revoke: {args.fact_id}",
+                    )
+                    trust_store.store_audit_trace(trace)
+                    if args.json:
+                        _emit({"success": result.success, "fact_id": args.fact_id, "trace_id": trace.trace_id}, True)
                     else:
-                        print(f"Revoke failed: {result.error}")
-                return 0 if result.success else 1
+                        if result.success:
+                            print(f"Memory claim revoked: {args.fact_id}")
+                        else:
+                            print(f"Revoke failed: {result.error}")
+                    return 0 if result.success else 1
 
-            elif mem_cmd == "gc":
-                result = memory_store.gc(before_timestamp=args.before)
-                trace = AuditTrace(
-                    trace_id=new_urn_uuid(),
-                    trace_type="memory_gc",
-                    created_at=utc_now_iso(),
-                    workspace_root=workspace,
-                    mutation={"deleted_count": result.deleted_count, "remaining": result.total_count},
-                    summary=f"Memory GC: {result.deleted_count} deleted, {result.total_count} remaining",
-                )
-                trust_store.store_audit_trace(trace)
-                if args.json:
-                    _emit({"deleted": result.deleted_count, "remaining": result.total_count, "trace_id": trace.trace_id}, True)
+                elif mem_cmd == "gc":
+                    result = memory_store.gc(before_timestamp=args.before)
+                    trace = AuditTrace(
+                        trace_id=new_urn_uuid(),
+                        trace_type="memory_gc",
+                        created_at=utc_now_iso(),
+                        workspace_root=workspace,
+                        mutation={"deleted_count": result.deleted_count, "remaining": result.total_count},
+                        summary=f"Memory GC: {result.deleted_count} deleted, {result.total_count} remaining",
+                    )
+                    trust_store.store_audit_trace(trace)
+                    if args.json:
+                        _emit({"deleted": result.deleted_count, "remaining": result.total_count, "trace_id": trace.trace_id}, True)
+                    else:
+                        print(f"Memory GC: {result.deleted_count} deleted, {result.total_count} remaining")
+                    return 0
                 else:
-                    print(f"Memory GC: {result.deleted_count} deleted, {result.total_count} remaining")
+                    parser.error("unknown memory command")
                 return 0
-            else:
-                parser.error("unknown memory command")
-            return 0
 
-        # Phase 1: models command
-        if args.command == "models":
-            try:
-                from hermes_prime.llm.ollama_adapter import OllamaClient
-                from hermes_prime.llm.vllm_adapter import VLLMClient
+            # Phase 1: models command
+            if args.command == "models":
+                try:
+                    from hermes_prime.llm.ollama_adapter import OllamaClient
+                    from hermes_prime.llm.vllm_adapter import VLLMClient
 
-                if args.provider == "ollama":
+                    if args.provider == "ollama":
+                        client = OllamaClient()
+                        health = client.health_check()
+                        if not health:
+                            print("Ollama is not running. Start it with: ollama serve")
+                            return 1
+                        models = client.list_models()
+                    else:
+                        client = VLLMClient()
+                        health = client.health_check()
+                        if not health:
+                            print("vLLM endpoint is not reachable.")
+                            return 1
+                        models = client.list_models()
+
+                    if args.json:
+                        _emit({"provider": args.provider, "models": models}, True)
+                    else:
+                        if models:
+                            print(f"\n{args.provider.upper()} Models:")
+                            for model in models:
+                                print(f"  - {model}")
+                        else:
+                            print(f"No models available from {args.provider}")
+                    return 0
+                except ImportError:
+                    print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
+                    return 1
+                except Exception as e:
+                    print(f"Error listing models: {e}")
+                    return 1
+
+            # Phase 4: Elite Terminal UI
+            if args.command == "hp-dashboard":
+                try:
+                    from hermes_prime.tui.dashboard import HermesDashboard
+                    dash = HermesDashboard(use_textual=True)
+                    return dash.run()
+                except Exception as e:
+                    print(f"Dashboard unavailable: {e}")
+                    return 1
+
+            if args.command == "tui":
+                from hermes_prime.tui.banner import HERMES_PRIME_LOGO
+                from hermes_prime.tui.components import (
+                    OperatorConsole, TelemetryHeader,
+                )
+                from hermes_prime.tui.animations import boot_sequence
+
+                if args.tui_command == "logo":
+                    print(HERMES_PRIME_LOGO)
+                    return 0
+
+                if args.tui_command == "console":
+                    console = OperatorConsole()
+                    print(console.render())
+                    return 0
+
+                if args.tui_command == "telemetry":
+                    telemetry = TelemetryHeader()
+                    print(telemetry.render())
+                    return 0
+
+                if args.tui_command == "boot":
+                    boot_sequence(clear=lambda: print("\033[2J\033[H", end=""))
+                    return 0
+
+                parser.error("unknown tui command")
+                return 1
+
+            # Learning Loop commands
+            if args.command == "learn":
+                outcome_store = OutcomeStore(workspace_path / ".hermes-prime" / "outcomes.db")
+                registry = LearningRegistry(workspace_path / ".hermes-prime" / "learned_patterns.json")
+                memory_store = MemoryStore(
+                    backend=SQLiteMemoryBackend(workspace_path / ".hermes-prime" / "memory.db"),
+                    depth_policy=DepthPolicy(),
+                )
+                engine = LearningEngine(
+                    outcome_store=outcome_store,
+                    registry=registry,
+                    memory_store=memory_store,
+                )
+
+                if args.learn_command == "reflect":
+                    result = engine.reflect(min_outcomes=args.min_outcomes)
+                    if args.json:
+                        _emit(result, True)
+                    else:
+                        if result.get("reflected"):
+                            print(f"Reflection complete: {result['patterns_created']} patterns created")
+                            print(f"Reviewed {result['total_outcomes_reviewed']} outcomes")
+                            m = result.get("metrics", {})
+                            print(f"Approval rate: {m.get('approval_rate', 0):.1%}")
+                            print(f"Parse rate: {m.get('parse_rate', 0):.1%}")
+                        else:
+                            print(f"No reflection: {result.get('reason', 'unknown')}")
+                    return 0
+
+                elif args.learn_command == "status":
+                    status = engine.status()
+                    if args.json:
+                        _emit(status, True)
+                    else:
+                        outcomes = status.get("outcomes", {})
+                        patterns = status.get("learned_patterns", {})
+                        print("\nLearning Loop Status")
+                        print(f"{'='*60}")
+                        print(f"Total executions tracked: {outcomes.get('total', 0)}")
+                        print(f"Approval rate: {outcomes.get('approval_rate', 0):.1%}")
+                        print(f"Parse rate: {outcomes.get('parse_rate', 0):.1%}")
+                        print(f"Learned patterns: {patterns.get('total_patterns', 0)}")
+                        print(f"By type: {patterns.get('by_type', {})}")
+                        print(f"Ready to learn: {'yes' if status.get('ready_to_learn') else 'no (need 5+ outcomes)'}")
+                    return 0
+
+                elif args.learn_command == "patterns":
+                    patterns = registry.list_patterns(
+                        pattern_type=args.pattern_type,
+                        min_confidence=args.min_confidence,
+                        limit=args.limit,
+                    )
+                    if args.json:
+                        _emit({"patterns": [p.to_dict() for p in patterns], "count": len(patterns)}, True)
+                    else:
+                        if not patterns:
+                            print("No learned patterns found.")
+                        else:
+                            print(f"\nLearned Patterns ({len(patterns)})")
+                            print(f"{'='*60}")
+                            for p in patterns:
+                                print(f"  [{p.pattern_type}] {p.pattern_id[:16]}... (confidence: {p.confidence:.2f})")
+                                print(f"  {p.content[:120]}")
+                                print(f"  Applied: {p.application_count}x | Success: {p.success_rate:.0%}")
+                                if p.tags:
+                                    print(f"  Tags: {', '.join(p.tags)}")
+                                print()
+                    return 0
+
+                elif args.learn_command == "forget":
+                    success = registry.remove(args.pattern_id)
+                    if args.json:
+                        _emit({"removed": success, "pattern_id": args.pattern_id}, True)
+                    else:
+                        if success:
+                            print(f"Pattern {args.pattern_id} removed.")
+                        else:
+                            print(f"Pattern {args.pattern_id} not found.")
+                    return 0 if success else 1
+
+                elif args.learn_command == "outcomes":
+                    metrics = outcome_store.get_metrics()
+                    recent = outcome_store.get_recent(limit=10)
+                    if args.json:
+                        _emit({"metrics": metrics, "recent": [o.to_dict() for o in recent]}, True)
+                    else:
+                        print("\nExecution Outcomes")
+                        print(f"{'='*60}")
+                        print(f"Total: {metrics.get('total', 0)}")
+                        print(f"Approved: {metrics.get('approved', 0)}")
+                        print(f"Rejected by Sentinel: {metrics.get('rejected_by_sentinel', 0)}")
+                        print(f"Parse failures: {metrics.get('parse_failures', 0)}")
+                        print(f"Approval rate: {metrics.get('approval_rate', 0):.1%}")
+                        print(f"Avg latency: {metrics.get('avg_latency_ms', 0)}ms")
+                        print(f"Avg tokens: {metrics.get('avg_tokens', 0)}")
+                        if metrics.get("blocking_layer_distribution"):
+                            print(f"Blocking layers: {metrics['blocking_layer_distribution']}")
+                        print("\nRecent outcomes:")
+                        for o in recent:
+                            status = "✓" if o.approved else "✗"
+                            print(f"  [{status}] {o.action_type:20s} {o.task_prompt[:50]}")
+                    return 0
+
+                elif args.learn_command == "metrics":
+                    outcome_metrics = outcome_store.get_metrics()
+                    registry_metrics = registry.get_metrics()
+                    payload = {"outcomes": outcome_metrics, "patterns": registry_metrics}
+                    if args.json:
+                        _emit(payload, True)
+                    else:
+                        print("\nLearning Metrics")
+                        print(f"{'='*60}")
+                        print(f"Outcomes tracked: {outcome_metrics.get('total', 0)}")
+                        print(f"Patterns learned: {registry_metrics.get('total_patterns', 0)}")
+                        print(f"Avg pattern confidence: {registry_metrics.get('avg_confidence', 0):.3f}")
+                    return 0
+
+                else:
+                    parser.error("unknown learn command")
+                return 0
+
+            # Brain / Neural Network commands
+            if args.command == "brain":
+                from hermes_prime.brain import NeuralGraph, BrainJournal, AutoLinker, BrainMaintenanceAgent, NodeType, EdgeType
+
+                brain_db = workspace_path / ".hermes-prime" / "brain.db"
+                graph = NeuralGraph(brain_db)
+                journal = BrainJournal(graph)
+                linker = AutoLinker(graph)
+                maintenance = BrainMaintenanceAgent(graph, linker)
+
+                if args.brain_command == "write":
+                    tags = [t.strip() for t in args.tags.split(",")] if args.tags else []
+                    type_map = {
+                        "topic": NodeType.TOPIC, "problem": NodeType.PROBLEM,
+                        "solution": NodeType.SOLUTION, "observation": NodeType.OBSERVATION,
+                        "pattern": NodeType.PATTERN, "decision": NodeType.DECISION,
+                        "concept": NodeType.CONCEPT,
+                    }
+                    ntype = type_map.get(args.node_type, NodeType.OBSERVATION)
+                    node = graph.add_node(ntype, args.title, args.content, tags=tags)
+                    link_ids = [x.strip() for x in args.link_to.split(",")] if args.link_to else []
+                    for lid in link_ids:
+                        graph.add_edge(node.node_id, lid, EdgeType.RELATES_TO)
+                    created = linker.link_new_node(node.node_id)
+                    if args.json:
+                        _emit({"node_id": node.node_id, "links_created": created, "node": node.to_dict()}, True)
+                    else:
+                        print(f"Brain node written: {node.node_id[:16]}...")
+                        print(f"  Title: {node.title}")
+                        print(f"  Type: {node.node_type.value}")
+                        print(f"  Auto-links created: {created}")
+                    return 0
+
+                elif args.brain_command == "search":
+                    ntype_enum = NodeType(args.node_type) if args.node_type else None
+                    ntypes = [ntype_enum] if ntype_enum else None
+                    results = graph.search_nodes(args.query, node_types=ntypes, limit=args.limit)
+                    if args.json:
+                        _emit({"query": args.query, "results": [r.to_dict() for r in results]}, True)
+                    else:
+                        if not results:
+                            print(f"No brain nodes matching '{args.query}'")
+                        else:
+                            print(f"\nBrain Search: '{args.query}' ({len(results)} results)")
+                            print(f"{'='*60}")
+                            for r in results:
+                                edges = graph.get_node_edges(r.node_id)
+                                print(f"  [{r.node_type.value}] {r.title}")
+                                print(f"    ID: {r.node_id[:16]}... | Confidence: {r.confidence:.2f} | Links: {len(edges)}")
+                                print(f"    {r.content[:100]}")
+                                print()
+                    return 0
+
+                elif args.brain_command == "problem":
+                    problem = journal.write_problem(args.title, args.description, context=args.context)
+                    linker.link_new_node(problem.node_id)
+                    print(f"Problem recorded: {problem.node_id[:16]}...")
+                    if args.solution_title and args.solution_desc:
+                        solution = journal.write_solution(
+                            args.solution_title, args.solution_desc, problem.node_id,
+                        )
+                        linker.link_problem_to_solution(problem.node_id, solution.node_id)
+                        print(f"Solution recorded: {solution.node_id[:16]}...")
+                    return 0
+
+                elif args.brain_command == "status":
+                    health = maintenance.get_health_report()
+                    metrics = graph.get_metrics()
+                    if args.json:
+                        _emit({"health": health, "metrics": metrics}, True)
+                    else:
+                        print("\nBrain Health")
+                        print(f"{'='*60}")
+                        print(f"Total nodes: {health['total_nodes']}")
+                        print(f"Total connections: {health['total_edges']}")
+                        print(f"Health score: {health['health_score']:.3f}")
+                        print(f"Unsolved problems: {health['unsolved_problems']}")
+                        print(f"Orphaned nodes: {health['orphaned_nodes']}")
+                        print(f"Low confidence: {health['low_confidence_nodes']}")
+                        print(f"Old unused: {health['old_unused_nodes']}")
+                        if health.get("by_type"):
+                            print("\nBy type:")
+                            for t, c in sorted(health["by_type"].items()):
+                                print(f"  {t}: {c}")
+                    return 0
+
+                elif args.brain_command == "maintenance":
+                    report = maintenance.run_maintenance(
+                        dry_run=args.dry_run,
+                        max_age_days=args.max_age,
+                        min_confidence=args.min_confidence,
+                    )
+                    if args.json:
+                        _emit(report, True)
+                    else:
+                        print("\nBrain Maintenance")
+                        print(f"{'='*60}")
+                        print(f"Pruned nodes: {report['pruned_nodes']}")
+                        print(f"Merged duplicates: {report['merged_nodes']}")
+                        print(f"Consolidated orphans: {report['consolidated_orphans']}")
+                        print(f"Pruned edges: {report['pruned_edges']}")
+                        print(f"Remaining nodes: {report['remaining_nodes']}")
+                        print(f"Remaining edges: {report['remaining_edges']}")
+                        print(f"Dry run: {report['dry_run']}")
+                    return 0
+
+                elif args.brain_command == "export":
+                    result = journal.export_obsidian_vault(args.output)
+                    if args.json:
+                        _emit(result, True)
+                    else:
+                        print(f"Brain exported to {result['vault_path']}")
+                        print(f"  {result['notes_exported']} notes")
+                        print(f"  {result['links_exported']} connections")
+                    return 0
+
+                elif args.brain_command == "path":
+                    path = graph.find_shortest_path(args.from_id, args.to_id)
+                    if args.json:
+                        _emit({"from": args.from_id, "to": args.to_id, "path": path}, True)
+                    else:
+                        if path:
+                            print(f"Path ({len(path) - 1} hops):")
+                            for i, nid in enumerate(path):
+                                node = graph.get_node(nid)
+                                name = node.title if node else nid[:16]
+                                arrow = " → " if i < len(path) - 1 else ""
+                                print(f"  {i}. {name}{arrow}")
+                        else:
+                            print("No path found between these nodes.")
+                    return 0
+
+                elif args.brain_command == "link":
+                    edge = graph.add_edge(
+                        args.source, args.target,
+                        EdgeType(args.edge_type), weight=1.0,
+                    )
+                    if args.json:
+                        _emit({"edge_id": edge.edge_id if edge else None}, True)
+                    else:
+                        if edge:
+                            print(f"Linked: {args.source[:16]}... → {args.target[:16]}... ({args.edge_type})")
+                        else:
+                            print("Failed to create link (may already exist).")
+                    return 0
+
+                elif args.brain_command == "unsolved":
+                    unsolved = journal.get_problems_unsolved()
+                    if args.json:
+                        _emit({"unsolved_problems": [p.to_dict() for p in unsolved]}, True)
+                    else:
+                        if not unsolved:
+                            print("No unsolved problems!")
+                        else:
+                            print(f"\nUnsolved Problems ({len(unsolved)})")
+                            print(f"{'='*60}")
+                            for p in unsolved:
+                                sol_count = len(journal.get_solutions_for_problem(p.node_id))
+                                print(f"  {p.title}")
+                                print(f"    ID: {p.node_id[:16]}... | Solutions tried: {sol_count}")
+                                print(f"    {p.content[:100]}")
+                                print()
+                    return 0
+
+                else:
+                    parser.error("unknown brain command")
+                return 0
+
+            # Phase 3: Agent Orchestration commands
+            if args.command == "agents":
+                from hermes_prime.orch import AgentMesh, Dispatcher, RecursionWatchdog
+                from hermes_prime.orch.mesh import DepthLimitError
+                from hermes_prime.contracts import AgentSpawnRequest
+
+                mesh = AgentMesh(max_depth=5)
+                watchdog = RecursionWatchdog(mesh)
+                dispatcher = Dispatcher(mesh=mesh, watchdog=watchdog)
+
+                if args.agent_command == "list":
+                    agents = dispatcher.list_agents(status=args.status)
+                    if args.json:
+                        _emit({"agents": agents, "count": len(agents)}, True)
+                    else:
+                        print(f"\nAgents ({len(agents)} total)")
+                        print(f"{'='*60}")
+                        for a in agents:
+                            depth_mark = "(root)" if a["depth"] == 0 else f"depth={a['depth']}"
+                            print(f"  [{a['status']}] {a['agent_id'][:16]}... {depth_mark}")
+                            print(f"  Task: {a['task_description'][:60]}")
+                            print(f"  Scope: {a['capability_scope']}")
+                            print()
+                    return 0
+
+                elif args.agent_command == "spawn":
+                    request = AgentSpawnRequest(
+                        task_description=args.task,
+                        scope=args.scope,
+                        risk_tier_ceiling=RiskTier(args.risk_tier),
+                        parent_agent_id=args.parent,
+                        max_depth=mesh.max_depth,
+                        capability_actions=[ActionType(a) for a in args.actions],
+                    )
+                    try:
+                        agent_id = dispatcher.spawn(request, spawned_by="cli")
+                    except DepthLimitError as e:
+                        print(f"Failed: {e}")
+                        return 1
+
+                    agent_info = dispatcher.get_status(agent_id)
+                    if args.json:
+                        _emit({"agent_id": agent_id, "agent": agent_info}, True)
+                    else:
+                        print(f"Agent spawned: {agent_id}")
+                        print(f"  Task: {args.task}")
+                        print(f"  Scope: {args.scope}")
+                        print(f"  Depth: {agent_info['depth'] if agent_info else '?'}")
+                    return 0
+
+                elif args.agent_command == "kill":
+                    try:
+                        dispatcher.kill(args.agent_id)
+                        agent_info = dispatcher.get_status(args.agent_id)
+                        if args.json:
+                            _emit({"killed": args.agent_id, "status": agent_info["status"] if agent_info else "unknown"}, True)
+                        else:
+                            print(f"Agent {args.agent_id} killed.")
+                    except Exception as e:
+                        print(f"Failed: {e}")
+                        return 1
+                    return 0
+
+                else:
+                    parser.error("unknown agent command")
+                return 0
+
+            # Phase 1: run command (autonomous execution)
+            if args.command == "run":
+                try:
+                    from hermes_prime.llm.ollama_adapter import OllamaClient
+                    from hermes_prime.autonomous.executor import AutonomousExecutor
+
                     client = OllamaClient()
-                    health = client.health_check()
-                    if not health:
+                    if not client.health_check():
                         print("Ollama is not running. Start it with: ollama serve")
                         return 1
-                    models = client.list_models()
-                else:
-                    client = VLLMClient()
-                    health = client.health_check()
-                    if not health:
-                        print("vLLM endpoint is not reachable.")
-                        return 1
-                    models = client.list_models()
 
-                if args.json:
-                    _emit({"provider": args.provider, "models": models}, True)
-                else:
-                    if models:
-                        print(f"\n{args.provider.upper()} Models:")
-                        for model in models:
-                            print(f"  - {model}")
-                    else:
-                        print(f"No models available from {args.provider}")
-                return 0
-            except ImportError:
-                print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
-                return 1
-            except Exception as e:
-                print(f"Error listing models: {e}")
-                return 1
-
-        # Phase 4: Elite Terminal UI
-        if args.command == "hp-dashboard":
-            try:
-                from hermes_prime.tui.dashboard import HermesDashboard
-                dash = HermesDashboard(use_textual=True)
-                return dash.run()
-            except Exception as e:
-                print(f"Dashboard unavailable: {e}")
-                return 1
-
-        if args.command == "tui":
-            from hermes_prime.tui.banner import HERMES_PRIME_LOGO
-            from hermes_prime.tui.components import (
-                OperatorConsole, TelemetryHeader,
-            )
-            from hermes_prime.tui.animations import boot_sequence
-
-            if args.tui_command == "logo":
-                print(HERMES_PRIME_LOGO)
-                return 0
-
-            if args.tui_command == "console":
-                console = OperatorConsole()
-                print(console.render())
-                return 0
-
-            if args.tui_command == "telemetry":
-                telemetry = TelemetryHeader()
-                print(telemetry.render())
-                return 0
-
-            if args.tui_command == "boot":
-                boot_sequence(clear=lambda: print("\033[2J\033[H", end=""))
-                return 0
-
-            parser.error("unknown tui command")
-            return 1
-
-        # Learning Loop commands
-        if args.command == "learn":
-            outcome_store = OutcomeStore(workspace_path / ".hermes-prime" / "outcomes.db")
-            registry = LearningRegistry(workspace_path / ".hermes-prime" / "learned_patterns.json")
-            memory_store = MemoryStore(
-                backend=SQLiteMemoryBackend(workspace_path / ".hermes-prime" / "memory.db"),
-                depth_policy=DepthPolicy(),
-            )
-            engine = LearningEngine(
-                outcome_store=outcome_store,
-                registry=registry,
-                memory_store=memory_store,
-            )
-
-            if args.learn_command == "reflect":
-                result = engine.reflect(min_outcomes=args.min_outcomes)
-                if args.json:
-                    _emit(result, True)
-                else:
-                    if result.get("reflected"):
-                        print(f"Reflection complete: {result['patterns_created']} patterns created")
-                        print(f"Reviewed {result['total_outcomes_reviewed']} outcomes")
-                        m = result.get("metrics", {})
-                        print(f"Approval rate: {m.get('approval_rate', 0):.1%}")
-                        print(f"Parse rate: {m.get('parse_rate', 0):.1%}")
-                    else:
-                        print(f"No reflection: {result.get('reason', 'unknown')}")
-                return 0
-
-            elif args.learn_command == "status":
-                status = engine.status()
-                if args.json:
-                    _emit(status, True)
-                else:
-                    outcomes = status.get("outcomes", {})
-                    patterns = status.get("learned_patterns", {})
-                    print("\nLearning Loop Status")
-                    print(f"{'='*60}")
-                    print(f"Total executions tracked: {outcomes.get('total', 0)}")
-                    print(f"Approval rate: {outcomes.get('approval_rate', 0):.1%}")
-                    print(f"Parse rate: {outcomes.get('parse_rate', 0):.1%}")
-                    print(f"Learned patterns: {patterns.get('total_patterns', 0)}")
-                    print(f"By type: {patterns.get('by_type', {})}")
-                    print(f"Ready to learn: {'yes' if status.get('ready_to_learn') else 'no (need 5+ outcomes)'}")
-                return 0
-
-            elif args.learn_command == "patterns":
-                patterns = registry.list_patterns(
-                    pattern_type=args.pattern_type,
-                    min_confidence=args.min_confidence,
-                    limit=args.limit,
-                )
-                if args.json:
-                    _emit({"patterns": [p.to_dict() for p in patterns], "count": len(patterns)}, True)
-                else:
-                    if not patterns:
-                        print("No learned patterns found.")
-                    else:
-                        print(f"\nLearned Patterns ({len(patterns)})")
-                        print(f"{'='*60}")
-                        for p in patterns:
-                            print(f"  [{p.pattern_type}] {p.pattern_id[:16]}... (confidence: {p.confidence:.2f})")
-                            print(f"  {p.content[:120]}")
-                            print(f"  Applied: {p.application_count}x | Success: {p.success_rate:.0%}")
-                            if p.tags:
-                                print(f"  Tags: {', '.join(p.tags)}")
-                            print()
-                return 0
-
-            elif args.learn_command == "forget":
-                success = registry.remove(args.pattern_id)
-                if args.json:
-                    _emit({"removed": success, "pattern_id": args.pattern_id}, True)
-                else:
-                    if success:
-                        print(f"Pattern {args.pattern_id} removed.")
-                    else:
-                        print(f"Pattern {args.pattern_id} not found.")
-                return 0 if success else 1
-
-            elif args.learn_command == "outcomes":
-                metrics = outcome_store.get_metrics()
-                recent = outcome_store.get_recent(limit=10)
-                if args.json:
-                    _emit({"metrics": metrics, "recent": [o.to_dict() for o in recent]}, True)
-                else:
-                    print("\nExecution Outcomes")
-                    print(f"{'='*60}")
-                    print(f"Total: {metrics.get('total', 0)}")
-                    print(f"Approved: {metrics.get('approved', 0)}")
-                    print(f"Rejected by Sentinel: {metrics.get('rejected_by_sentinel', 0)}")
-                    print(f"Parse failures: {metrics.get('parse_failures', 0)}")
-                    print(f"Approval rate: {metrics.get('approval_rate', 0):.1%}")
-                    print(f"Avg latency: {metrics.get('avg_latency_ms', 0)}ms")
-                    print(f"Avg tokens: {metrics.get('avg_tokens', 0)}")
-                    if metrics.get("blocking_layer_distribution"):
-                        print(f"Blocking layers: {metrics['blocking_layer_distribution']}")
-                    print("\nRecent outcomes:")
-                    for o in recent:
-                        status = "✓" if o.approved else "✗"
-                        print(f"  [{status}] {o.action_type:20s} {o.task_prompt[:50]}")
-                return 0
-
-            elif args.learn_command == "metrics":
-                outcome_metrics = outcome_store.get_metrics()
-                registry_metrics = registry.get_metrics()
-                payload = {"outcomes": outcome_metrics, "patterns": registry_metrics}
-                if args.json:
-                    _emit(payload, True)
-                else:
-                    print("\nLearning Metrics")
-                    print(f"{'='*60}")
-                    print(f"Outcomes tracked: {outcome_metrics.get('total', 0)}")
-                    print(f"Patterns learned: {registry_metrics.get('total_patterns', 0)}")
-                    print(f"Avg pattern confidence: {registry_metrics.get('avg_confidence', 0):.3f}")
-                return 0
-
-            else:
-                parser.error("unknown learn command")
-            return 0
-
-        # Brain / Neural Network commands
-        if args.command == "brain":
-            from hermes_prime.brain import NeuralGraph, BrainJournal, AutoLinker, BrainMaintenanceAgent, NodeType, EdgeType
-
-            brain_db = workspace_path / ".hermes-prime" / "brain.db"
-            graph = NeuralGraph(brain_db)
-            journal = BrainJournal(graph)
-            linker = AutoLinker(graph)
-            maintenance = BrainMaintenanceAgent(graph, linker)
-
-            if args.brain_command == "write":
-                tags = [t.strip() for t in args.tags.split(",")] if args.tags else []
-                type_map = {
-                    "topic": NodeType.TOPIC, "problem": NodeType.PROBLEM,
-                    "solution": NodeType.SOLUTION, "observation": NodeType.OBSERVATION,
-                    "pattern": NodeType.PATTERN, "decision": NodeType.DECISION,
-                    "concept": NodeType.CONCEPT,
-                }
-                ntype = type_map.get(args.node_type, NodeType.OBSERVATION)
-                node = graph.add_node(ntype, args.title, args.content, tags=tags)
-                link_ids = [x.strip() for x in args.link_to.split(",")] if args.link_to else []
-                for lid in link_ids:
-                    graph.add_edge(node.node_id, lid, EdgeType.RELATES_TO)
-                created = linker.link_new_node(node.node_id)
-                if args.json:
-                    _emit({"node_id": node.node_id, "links_created": created, "node": node.to_dict()}, True)
-                else:
-                    print(f"Brain node written: {node.node_id[:16]}...")
-                    print(f"  Title: {node.title}")
-                    print(f"  Type: {node.node_type.value}")
-                    print(f"  Auto-links created: {created}")
-                return 0
-
-            elif args.brain_command == "search":
-                ntype_enum = NodeType(args.node_type) if args.node_type else None
-                ntypes = [ntype_enum] if ntype_enum else None
-                results = graph.search_nodes(args.query, node_types=ntypes, limit=args.limit)
-                if args.json:
-                    _emit({"query": args.query, "results": [r.to_dict() for r in results]}, True)
-                else:
-                    if not results:
-                        print(f"No brain nodes matching '{args.query}'")
-                    else:
-                        print(f"\nBrain Search: '{args.query}' ({len(results)} results)")
-                        print(f"{'='*60}")
-                        for r in results:
-                            edges = graph.get_node_edges(r.node_id)
-                            print(f"  [{r.node_type.value}] {r.title}")
-                            print(f"    ID: {r.node_id[:16]}... | Confidence: {r.confidence:.2f} | Links: {len(edges)}")
-                            print(f"    {r.content[:100]}")
-                            print()
-                return 0
-
-            elif args.brain_command == "problem":
-                problem = journal.write_problem(args.title, args.description, context=args.context)
-                linker.link_new_node(problem.node_id)
-                print(f"Problem recorded: {problem.node_id[:16]}...")
-                if args.solution_title and args.solution_desc:
-                    solution = journal.write_solution(
-                        args.solution_title, args.solution_desc, problem.node_id,
+                    executor = AutonomousExecutor(
+                        llm_client=client,
+                        sentinel=sentinel,
+                        vault=vault,
+                        trust_store=trust_store,
+                        workspace_root=workspace,
+                        forge=None,
                     )
-                    linker.link_problem_to_solution(problem.node_id, solution.node_id)
-                    print(f"Solution recorded: {solution.node_id[:16]}...")
-                return 0
+                    result = executor.execute(
+                        task_prompt=args.task,
+                        model=args.model,
+                        scope=args.scope,
+                    )
 
-            elif args.brain_command == "status":
-                health = maintenance.get_health_report()
-                metrics = graph.get_metrics()
-                if args.json:
-                    _emit({"health": health, "metrics": metrics}, True)
-                else:
-                    print("\nBrain Health")
-                    print(f"{'='*60}")
-                    print(f"Total nodes: {health['total_nodes']}")
-                    print(f"Total connections: {health['total_edges']}")
-                    print(f"Health score: {health['health_score']:.3f}")
-                    print(f"Unsolved problems: {health['unsolved_problems']}")
-                    print(f"Orphaned nodes: {health['orphaned_nodes']}")
-                    print(f"Low confidence: {health['low_confidence_nodes']}")
-                    print(f"Old unused: {health['old_unused_nodes']}")
-                    if health.get("by_type"):
-                        print("\nBy type:")
-                        for t, c in sorted(health["by_type"].items()):
-                            print(f"  {t}: {c}")
-                return 0
-
-            elif args.brain_command == "maintenance":
-                report = maintenance.run_maintenance(
-                    dry_run=args.dry_run,
-                    max_age_days=args.max_age,
-                    min_confidence=args.min_confidence,
-                )
-                if args.json:
-                    _emit(report, True)
-                else:
-                    print("\nBrain Maintenance")
-                    print(f"{'='*60}")
-                    print(f"Pruned nodes: {report['pruned_nodes']}")
-                    print(f"Merged duplicates: {report['merged_nodes']}")
-                    print(f"Consolidated orphans: {report['consolidated_orphans']}")
-                    print(f"Pruned edges: {report['pruned_edges']}")
-                    print(f"Remaining nodes: {report['remaining_nodes']}")
-                    print(f"Remaining edges: {report['remaining_edges']}")
-                    print(f"Dry run: {report['dry_run']}")
-                return 0
-
-            elif args.brain_command == "export":
-                result = journal.export_obsidian_vault(args.output)
-                if args.json:
-                    _emit(result, True)
-                else:
-                    print(f"Brain exported to {result['vault_path']}")
-                    print(f"  {result['notes_exported']} notes")
-                    print(f"  {result['links_exported']} connections")
-                return 0
-
-            elif args.brain_command == "path":
-                path = graph.find_shortest_path(args.from_id, args.to_id)
-                if args.json:
-                    _emit({"from": args.from_id, "to": args.to_id, "path": path}, True)
-                else:
-                    if path:
-                        print(f"Path ({len(path) - 1} hops):")
-                        for i, nid in enumerate(path):
-                            node = graph.get_node(nid)
-                            name = node.title if node else nid[:16]
-                            arrow = " → " if i < len(path) - 1 else ""
-                            print(f"  {i}. {name}{arrow}")
-                    else:
-                        print("No path found between these nodes.")
-                return 0
-
-            elif args.brain_command == "link":
-                edge = graph.add_edge(
-                    args.source, args.target,
-                    EdgeType(args.edge_type), weight=1.0,
-                )
-                if args.json:
-                    _emit({"edge_id": edge.edge_id if edge else None}, True)
-                else:
-                    if edge:
-                        print(f"Linked: {args.source[:16]}... → {args.target[:16]}... ({args.edge_type})")
-                    else:
-                        print("Failed to create link (may already exist).")
-                return 0
-
-            elif args.brain_command == "unsolved":
-                unsolved = journal.get_problems_unsolved()
-                if args.json:
-                    _emit({"unsolved_problems": [p.to_dict() for p in unsolved]}, True)
-                else:
-                    if not unsolved:
-                        print("No unsolved problems!")
-                    else:
-                        print(f"\nUnsolved Problems ({len(unsolved)})")
-                        print(f"{'='*60}")
-                        for p in unsolved:
-                            sol_count = len(journal.get_solutions_for_problem(p.node_id))
-                            print(f"  {p.title}")
-                            print(f"    ID: {p.node_id[:16]}... | Solutions tried: {sol_count}")
-                            print(f"    {p.content[:100]}")
-                            print()
-                return 0
-
-            else:
-                parser.error("unknown brain command")
-            return 0
-
-        # Phase 3: Agent Orchestration commands
-        if args.command == "agents":
-            from hermes_prime.orch import AgentMesh, Dispatcher, RecursionWatchdog
-            from hermes_prime.orch.mesh import DepthLimitError
-            from hermes_prime.contracts import AgentSpawnRequest
-
-            mesh = AgentMesh(max_depth=5)
-            watchdog = RecursionWatchdog(mesh)
-            dispatcher = Dispatcher(mesh=mesh, watchdog=watchdog)
-
-            if args.agent_command == "list":
-                agents = dispatcher.list_agents(status=args.status)
-                if args.json:
-                    _emit({"agents": agents, "count": len(agents)}, True)
-                else:
-                    print(f"\nAgents ({len(agents)} total)")
-                    print(f"{'='*60}")
-                    for a in agents:
-                        depth_mark = "(root)" if a["depth"] == 0 else f"depth={a['depth']}"
-                        print(f"  [{a['status']}] {a['agent_id'][:16]}... {depth_mark}")
-                        print(f"  Task: {a['task_description'][:60]}")
-                        print(f"  Scope: {a['capability_scope']}")
-                        print()
-                return 0
-
-            elif args.agent_command == "spawn":
-                request = AgentSpawnRequest(
-                    task_description=args.task,
-                    scope=args.scope,
-                    risk_tier_ceiling=RiskTier(args.risk_tier),
-                    parent_agent_id=args.parent,
-                    max_depth=mesh.max_depth,
-                    capability_actions=[ActionType(a) for a in args.actions],
-                )
-                try:
-                    agent_id = dispatcher.spawn(request, spawned_by="cli")
-                except DepthLimitError as e:
-                    print(f"Failed: {e}")
-                    return 1
-
-                agent_info = dispatcher.get_status(agent_id)
-                if args.json:
-                    _emit({"agent_id": agent_id, "agent": agent_info}, True)
-                else:
-                    print(f"Agent spawned: {agent_id}")
-                    print(f"  Task: {args.task}")
-                    print(f"  Scope: {args.scope}")
-                    print(f"  Depth: {agent_info['depth'] if agent_info else '?'}")
-                return 0
-
-            elif args.agent_command == "kill":
-                try:
-                    dispatcher.kill(args.agent_id)
-                    agent_info = dispatcher.get_status(args.agent_id)
-                    if args.json:
-                        _emit({"killed": args.agent_id, "status": agent_info["status"] if agent_info else "unknown"}, True)
-                    else:
-                        print(f"Agent {args.agent_id} killed.")
-                except Exception as e:
-                    print(f"Failed: {e}")
-                    return 1
-                return 0
-
-            else:
-                parser.error("unknown agent command")
-            return 0
-
-        # Phase 1: run command (autonomous execution)
-        if args.command == "run":
-            try:
-                from hermes_prime.llm.ollama_adapter import OllamaClient
-                from hermes_prime.autonomous.executor import AutonomousExecutor
-
-                client = OllamaClient()
-                if not client.health_check():
-                    print("Ollama is not running. Start it with: ollama serve")
-                    return 1
-
-                executor = AutonomousExecutor(
-                    llm_client=client,
-                    sentinel=sentinel,
-                    vault=vault,
-                    trust_store=trust_store,
-                    workspace_root=workspace,
-                    forge=None,
-                )
-                result = executor.execute(
-                    task_prompt=args.task,
-                    model=args.model,
-                    scope=args.scope,
-                )
-
-                payload = {
-                    "execution_id": result.execution_id,
-                    "status": result.execution_status,
-                    "trace_id": result.trace_id,
-                    "task": result.task_prompt,
-                    "proposal": result.proposal.to_dict() if result.proposal else None,
-                    "decision": result.sentinel_decision,
-                    "inference": result.inference_attestation.to_dict() if result.inference_attestation else None,
-                    "summary": result.summary,
-                }
-
-                if args.json:
-                    _emit(payload, True)
-                else:
-                    print(f"\n{'='*60}")
-                    print(f"Autonomous Execution: {result.task_prompt}")
-                    print(f"{'='*60}")
-                    if result.proposal:
-                        print(f"Proposed Action: {result.proposal.action_type.value}")
-                        print(f"Scope: {result.proposal.scope}")
-                        print(f"Risk Tier: {result.proposal.risk_tier.value}")
-                    print(f"Status: {result.execution_status}")
-                    if result.error_message:
-                        print(f"Error: {result.error_message}")
-                    if result.inference_attestation:
-                        print(f"Inference Latency: {result.inference_attestation.latency_ms:.0f}ms")
-                        print(f"Tokens Used: {result.inference_attestation.tokens_used}")
-                    print(f"Trace ID: {result.trace_id}")
-                    print(f"{'='*60}\n")
-
-                return 0 if result.execution_status == "success" else 1
-            except ImportError:
-                print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
-                return 1
-            except Exception as e:
-                print(f"Error executing autonomous task: {e}")
-                if args.json:
-                    _emit({"error": str(e)}, True)
-                return 1
-
-        # Phase 8: Graphify commands
-        if args.command == "graphify":
-            from hermes_prime.memory.graphify_bridge import GraphifyBridge
-            bridge = GraphifyBridge(workspace_path=workspace)
-
-            if args.graphify_command == "status":
-                if bridge.available:
-                    loaded = bridge.load_existing_graph()
-                    nodes = len(bridge.get_nodes()) if loaded else 0
-                    edges = len(bridge.get_edges()) if loaded else 0
-                    if args.json:
-                        _emit({"available": True, "graph_loaded": loaded, "nodes": nodes, "edges": edges}, True)
-                    else:
-                        print(f"graphify: available, graph loaded={loaded} ({nodes} nodes, {edges} edges)")
-                else:
-                    if args.json:
-                        _emit({"available": False}, True)
-                    else:
-                        print("graphify: not available (install with: pip install graphifyy)")
-                return 0
-
-            elif args.graphify_command == "build":
-                if not bridge.available:
-                    print("graphify is not installed. Install with: pip install graphifyy")
-                    return 1
-                target = args.target or workspace
-                print(f"Building graphify knowledge graph for {target}...")
-                try:
-                    result = bridge.extract(target_path=target)
-                    print(f"Graph built: {len(result.get('nodes', []))} nodes, {len(result.get('edges', []))} edges")
-                    return 0
-                except Exception as e:
-                    print(f"Error building graph: {e}")
-                    return 1
-
-            elif args.graphify_command == "query":
-                loaded = bridge.load_existing_graph()
-                if not loaded:
-                    print("No graph found. Run 'hermes-prime graphify build' first.")
-                    return 1
-                subgraph = bridge.query_subgraph(args.query, depth=args.depth)
-                nodes = subgraph.get("nodes", [])
-                edges = subgraph.get("edges", [])
-                if args.json:
-                    _emit({"query": args.query, "nodes": nodes, "edges": edges}, True)
-                else:
-                    print(f"\nGraphify Query: {args.query}")
-                    print(f"{'='*60}")
-                    print(f"Subgraph: {len(nodes)} nodes, {len(edges)} edges")
-                    for n in nodes[:20]:
-                        label = n.get("label", n.get("name", n.get("id", "?")))
-                        print(f"  - {label}")
-                    if len(nodes) > 20:
-                        print(f"  ... and {len(nodes) - 20} more")
-                return 0
-
-            elif args.graphify_command == "import":
-                from hermes_prime.memory.graph import KnowledgeGraph
-                loaded = bridge.load_existing_graph(graph_path=args.graph_path)
-                if not loaded:
-                    print("No graph to import. Build or specify --graph-path.")
-                    return 1
-                kg = KnowledgeGraph()
-                count = bridge.import_to_knowledge_graph(kg)
-                print(f"Imported {count} edges into KnowledgeGraph")
-                return 0
-
-            else:
-                parser.error("unknown graphify command")
-            return 0
-
-        if args.command == "chat":
-            from hermes_prime.orch.governed_cli import run_governed_chat
-            return run_governed_chat(
-                model=args.model,
-                scope=args.scope,
-                context=args.context,
-            )
-
-        if args.command == "gateway":
-            from hermes_prime.gateway.governed_gateway import run_governed_gateway
-            return run_governed_gateway(
-                platforms=args.platforms.split(","),
-            )
-
-        if args.prompt is None:
-            parser.error("prompt is required when no subcommand is provided")
-
-        if args.autonomous:
-            # Autonomous path with LLM
-            try:
-                from hermes_prime.llm.ollama_adapter import OllamaClient
-                from hermes_prime.autonomous.executor import AutonomousExecutor
-
-                client = OllamaClient()
-                if not client.health_check():
-                    print("Ollama is not running. Start it with: ollama serve")
-                    return 1
-
-                executor = AutonomousExecutor(
-                    llm_client=client,
-                    sentinel=sentinel,
-                    vault=vault,
-                    trust_store=trust_store,
-                    workspace_root=workspace,
-                )
-                result = executor.execute(
-                    task_prompt=args.prompt,
-                    model=args.model,
-                )
-
-                if args.json:
-                    _emit({
+                    payload = {
                         "execution_id": result.execution_id,
                         "status": result.execution_status,
                         "trace_id": result.trace_id,
-                    }, True)
-                else:
-                    print(f"Autonomous: {result.summary}")
-                return 0
-            except ImportError:
-                print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
-                return 1
-            except Exception as e:
-                print(f"Error: {e}")
-                return 1
-        else:
-            # Legacy orchestrator path
-            orchestrator = HermesPrimeOrchestrator(
-                workspace_root=workspace,
-                fabric_root=fabric_root,
-                policy=policy,
-                vault=vault,
-                trust_store=trust_store,
-            )
-            result = orchestrator.run(args.prompt)
-            if args.json:
-                _emit(
-                    {
-                        "trace_id": result.trace_id,
-                        "backends": BackendRegistry(workspace_path).manifest(),
-                        "prompt": result.prompt,
-                        "classification": result.classification,
-                        "pattern_matches": result.pattern_matches,
-                        "augmentation": result.augmentation,
-                        "action": result.action,
-                        "decision": result.decision,
-                        "retrieval": result.retrieval,
+                        "task": result.task_prompt,
+                        "proposal": result.proposal.to_dict() if result.proposal else None,
+                        "decision": result.sentinel_decision,
+                        "inference": result.inference_attestation.to_dict() if result.inference_attestation else None,
                         "summary": result.summary,
-                    },
-                    True,
+                    }
+
+                    if args.json:
+                        _emit(payload, True)
+                    else:
+                        print(f"\n{'='*60}")
+                        print(f"Autonomous Execution: {result.task_prompt}")
+                        print(f"{'='*60}")
+                        if result.proposal:
+                            print(f"Proposed Action: {result.proposal.action_type.value}")
+                            print(f"Scope: {result.proposal.scope}")
+                            print(f"Risk Tier: {result.proposal.risk_tier.value}")
+                        print(f"Status: {result.execution_status}")
+                        if result.error_message:
+                            print(f"Error: {result.error_message}")
+                        if result.inference_attestation:
+                            print(f"Inference Latency: {result.inference_attestation.latency_ms:.0f}ms")
+                            print(f"Tokens Used: {result.inference_attestation.tokens_used}")
+                        print(f"Trace ID: {result.trace_id}")
+                        print(f"{'='*60}\n")
+
+                    return 0 if result.execution_status == "success" else 1
+                except ImportError:
+                    print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
+                    return 1
+                except Exception as e:
+                    print(f"Error executing autonomous task: {e}")
+                    if args.json:
+                        _emit({"error": str(e)}, True)
+                    return 1
+
+            # Phase 8: Graphify commands
+            if args.command == "graphify":
+                from hermes_prime.memory.graphify_bridge import GraphifyBridge
+                bridge = GraphifyBridge(workspace_path=workspace)
+
+                if args.graphify_command == "status":
+                    if bridge.available:
+                        loaded = bridge.load_existing_graph()
+                        nodes = len(bridge.get_nodes()) if loaded else 0
+                        edges = len(bridge.get_edges()) if loaded else 0
+                        if args.json:
+                            _emit({"available": True, "graph_loaded": loaded, "nodes": nodes, "edges": edges}, True)
+                        else:
+                            print(f"graphify: available, graph loaded={loaded} ({nodes} nodes, {edges} edges)")
+                    else:
+                        if args.json:
+                            _emit({"available": False}, True)
+                        else:
+                            print("graphify: not available (install with: pip install graphifyy)")
+                    return 0
+
+                elif args.graphify_command == "build":
+                    if not bridge.available:
+                        print("graphify is not installed. Install with: pip install graphifyy")
+                        return 1
+                    target = args.target or workspace
+                    print(f"Building graphify knowledge graph for {target}...")
+                    try:
+                        result = bridge.extract(target_path=target)
+                        print(f"Graph built: {len(result.get('nodes', []))} nodes, {len(result.get('edges', []))} edges")
+                        return 0
+                    except Exception as e:
+                        print(f"Error building graph: {e}")
+                        return 1
+
+                elif args.graphify_command == "query":
+                    loaded = bridge.load_existing_graph()
+                    if not loaded:
+                        print("No graph found. Run 'hermes-prime graphify build' first.")
+                        return 1
+                    subgraph = bridge.query_subgraph(args.query, depth=args.depth)
+                    nodes = subgraph.get("nodes", [])
+                    edges = subgraph.get("edges", [])
+                    if args.json:
+                        _emit({"query": args.query, "nodes": nodes, "edges": edges}, True)
+                    else:
+                        print(f"\nGraphify Query: {args.query}")
+                        print(f"{'='*60}")
+                        print(f"Subgraph: {len(nodes)} nodes, {len(edges)} edges")
+                        for n in nodes[:20]:
+                            label = n.get("label", n.get("name", n.get("id", "?")))
+                            print(f"  - {label}")
+                        if len(nodes) > 20:
+                            print(f"  ... and {len(nodes) - 20} more")
+                    return 0
+
+                elif args.graphify_command == "import":
+                    from hermes_prime.memory.graph import KnowledgeGraph
+                    loaded = bridge.load_existing_graph(graph_path=args.graph_path)
+                    if not loaded:
+                        print("No graph to import. Build or specify --graph-path.")
+                        return 1
+                    kg = KnowledgeGraph()
+                    count = bridge.import_to_knowledge_graph(kg)
+                    print(f"Imported {count} edges into KnowledgeGraph")
+                    return 0
+
+                else:
+                    parser.error("unknown graphify command")
+                return 0
+
+            if args.command == "chat":
+                from hermes_prime.orch.governed_cli import run_governed_chat
+                return run_governed_chat(
+                    model=args.model,
+                    scope=args.scope,
+                    context=args.context,
                 )
+
+            if args.command == "gateway":
+                from hermes_prime.gateway.governed_gateway import run_governed_gateway
+                return run_governed_gateway(
+                    platforms=args.platforms.split(","),
+                )
+
+            if args.prompt is None:
+                parser.error("prompt is required when no subcommand is provided")
+
+            if args.autonomous:
+                # Autonomous path with LLM
+                try:
+                    from hermes_prime.llm.ollama_adapter import OllamaClient
+                    from hermes_prime.autonomous.executor import AutonomousExecutor
+
+                    client = OllamaClient()
+                    if not client.health_check():
+                        print("Ollama is not running. Start it with: ollama serve")
+                        return 1
+
+                    executor = AutonomousExecutor(
+                        llm_client=client,
+                        sentinel=sentinel,
+                        vault=vault,
+                        trust_store=trust_store,
+                        workspace_root=workspace,
+                    )
+                    result = executor.execute(
+                        task_prompt=args.prompt,
+                        model=args.model,
+                    )
+
+                    if args.json:
+                        _emit({
+                            "execution_id": result.execution_id,
+                            "status": result.execution_status,
+                            "trace_id": result.trace_id,
+                        }, True)
+                    else:
+                        print(f"Autonomous: {result.summary}")
+                    return 0
+                except ImportError:
+                    print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
+                    return 1
+                except Exception as e:
+                    print(f"Error: {e}")
+                    return 1
             else:
-                backends = BackendRegistry(workspace_path).manifest()
-                print(f"Backend preference: {backends['preferred']}")
-                print(result.summary)
-            return 0
-    finally:
-        trust_store.close()
+                # Legacy orchestrator path
+                orchestrator = HermesPrimeOrchestrator(
+                    workspace_root=workspace,
+                    fabric_root=fabric_root,
+                    policy=policy,
+                    vault=vault,
+                    trust_store=trust_store,
+                )
+                result = orchestrator.run(args.prompt)
+                if args.json:
+                    _emit(
+                        {
+                            "trace_id": result.trace_id,
+                            "backends": BackendRegistry(workspace_path).manifest(),
+                            "prompt": result.prompt,
+                            "classification": result.classification,
+                            "pattern_matches": result.pattern_matches,
+                            "augmentation": result.augmentation,
+                            "action": result.action,
+                            "decision": result.decision,
+                            "retrieval": result.retrieval,
+                            "summary": result.summary,
+                        },
+                        True,
+                    )
+                else:
+                    backends = BackendRegistry(workspace_path).manifest()
+                    print(f"Backend preference: {backends['preferred']}")
+                    print(result.summary)
+                return 0
+        finally:
+            trust_store.close()
+
+    return handle_hp_command(args)
 
 
 if __name__ == "__main__":
     from hermes_prime.recovery import safe_main
     raise SystemExit(safe_main(lambda: main()))
+

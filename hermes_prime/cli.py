@@ -30,6 +30,12 @@ from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.backends.mempalace_backend import MemPalaceBackend
 from hermes_prime.utils import new_urn_uuid, sha256_bytes, utc_now_iso
 from infrastructure.backends import BackendRegistry
+
+known_hp_commands = {
+    "graphify", "repair", "inspect", "mint", "evaluate", "patch", "replay",
+    "models", "run", "agents", "hp-dashboard", "tui", "learn", "brain",
+    "hp-doctor", "hp-memory", "chat", "gateway",
+}
 from infrastructure.policy_engine.bundle import PolicyBundle
 from infrastructure.policy_engine.engine import PolicyContext, PolicyEngine
 from infrastructure.policy_engine.sentinel_service import SentinelService
@@ -325,16 +331,16 @@ def main(argv: list[str] | None = None) -> int:
         print("! Use `hermes-prime` instead of `hermes` to ensure this package runs.", flush=True)
 
     if argv is not None and "--prompt" not in argv and "--autonomous" not in argv:
-        commands = {
-            "graphify", "repair", "inspect", "mint", "evaluate", "patch", "replay",
-            "models", "run", "agents", "hp-dashboard", "tui", "learn", "brain",
-            "hp-doctor", "hp-memory", "chat", "gateway",
-        }
         non_option_tokens = [token for token in argv if token and not token.startswith("-")]
-        if len(non_option_tokens) == 1 and non_option_tokens[0] not in commands:
+        if len(non_option_tokens) == 1 and non_option_tokens[0] not in known_hp_commands:
             argv = list(argv) + ["--prompt", non_option_tokens[0]]
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args, _ = parser.parse_known_args(argv)
+    cmd = vars(args).get("command")
+
+    if not cmd:
+        import hermes_cli.main as upstream_main
+        return upstream_main.main(argv)
 
     workspace = str(Path(args.workspace).resolve())
     workspace_path = Path(workspace)

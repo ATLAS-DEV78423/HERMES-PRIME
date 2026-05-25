@@ -53,13 +53,13 @@ class SystemDoctorTests(unittest.TestCase):
         run_repair(self.root, dry_run=True)
         self.assertFalse(hermes_dir.exists())
 
-    def test_cli_doctor_json(self) -> None:
+    def test_cli_hp_doctor_json(self) -> None:
         import io
         from contextlib import redirect_stdout
 
         out = io.StringIO()
         with redirect_stdout(out):
-            code = main(["--workspace", str(self.root), "--json", "doctor"])
+            code = main(["--workspace", str(self.root), "--json", "hp-doctor"])
         self.assertEqual(code, 0)
         payload = json.loads(out.getvalue())
         self.assertIn("checks", payload)

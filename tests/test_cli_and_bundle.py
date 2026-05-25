@@ -67,7 +67,7 @@ class CliAndBundleTests(unittest.TestCase):
         self.assertIn("backends", payload)
         self.assertEqual(payload["backends"]["preferred"], "tree_sitter")
 
-    def test_cli_doctor_reports_readiness(self) -> None:
+    def test_cli_hp_doctor_reports_readiness(self) -> None:
         out = io.StringIO()
         with redirect_stdout(out):
             code = main(
@@ -75,7 +75,7 @@ class CliAndBundleTests(unittest.TestCase):
                     "--workspace",
                     str(self.root),
                     "--json",
-                    "doctor",
+                    "hp-doctor",
                 ]
         )
         self.assertEqual(code, 0)

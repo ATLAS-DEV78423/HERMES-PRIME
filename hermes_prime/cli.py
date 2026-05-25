@@ -71,7 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     g_import_parser.add_argument("--graph-path", default=None, help="Path to graph.json")
 
     doctor_parser = subparsers.add_parser(
-        "doctor",
+        "hp-doctor",
         help="Diagnose Hermes Prime installation and workspace health",
     )
     doctor_parser.add_argument(
@@ -126,7 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
     replay_parser.add_argument("--limit", type=int, default=1)
 
     # Phase 2: Memory Fabric
-    memory_parser = subparsers.add_parser("memory", help="Memory fabric commands")
+    memory_parser = subparsers.add_parser("hp-memory", help="Memory fabric commands")
     memory_sub = memory_parser.add_subparsers(dest="memory_command")
 
     mem_write = memory_sub.add_parser("write", help="Write a fact to memory")
@@ -258,7 +258,7 @@ def build_parser() -> argparse.ArgumentParser:
     brain_sub.add_parser("unsolved", help="List unsolved problems")
 
     # Phase 4: Elite Terminal UI
-    subparsers.add_parser("dashboard", help="Launch Textual live dashboard")
+    subparsers.add_parser("hp-dashboard", help="Launch Textual live dashboard")
 
     tui_parser = subparsers.add_parser("tui", help="Terminal UI components")
     tui_sub = tui_parser.add_subparsers(dest="tui_command")
@@ -326,8 +326,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if argv is not None and "--prompt" not in argv and "--autonomous" not in argv:
         commands = {
-            "doctor", "repair", "inspect", "mint", "evaluate", "patch", "replay",
-            "models", "run", "memory", "agents", "dashboard", "tui", "learn", "brain",
+            "graphify", "repair", "inspect", "mint", "evaluate", "patch", "replay",
+            "models", "run", "agents", "hp-dashboard", "tui", "learn", "brain",
+            "hp-doctor", "hp-memory", "chat", "gateway",
         }
         non_option_tokens = [token for token in argv if token and not token.startswith("-")]
         if len(non_option_tokens) == 1 and non_option_tokens[0] not in commands:
@@ -351,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
             policy_engine=policy,
         )
 
-        if args.command == "doctor":
+        if args.command == "hp-doctor":
             from hermes_prime.system_doctor import format_doctor_text, run_doctor
 
             doctor_report = run_doctor(workspace_path)
@@ -612,7 +613,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         # Phase 2: Memory Fabric commands
-        if args.command == "memory":
+        if args.command == "hp-memory":
             if args.memory_backend == "mempalace":
                 palace_path = args.memory_backend_config or str(workspace_path / ".hermes-prime" / "palace")
                 memory_store = MemoryStore(
@@ -808,7 +809,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
 
         # Phase 4: Elite Terminal UI
-        if args.command == "dashboard":
+        if args.command == "hp-dashboard":
             try:
                 from hermes_prime.tui.dashboard import HermesDashboard
                 dash = HermesDashboard(use_textual=True)

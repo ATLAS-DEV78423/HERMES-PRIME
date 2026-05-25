@@ -22,11 +22,17 @@ class LearningEngine:
         outcome_store: OutcomeStore,
         registry: LearningRegistry,
         memory_store: MemoryStore | None = None,
+        reflection_interval: int = 10,
     ):
         self.outcome_store = outcome_store
         self.registry = registry
         self.memory_store = memory_store
+        self._reflection_interval = reflection_interval
         self.consolidator = ReflectiveConsolidator(memory_store) if memory_store else None
+
+    @property
+    def reflection_interval(self) -> int:
+        return self._reflection_interval
 
     def reflect(self, min_outcomes: int = 5) -> dict[str, Any]:
         """Run one reflection cycle: review outcomes, extract patterns, store learnings."""
@@ -238,8 +244,8 @@ class LearningEngine:
         dummy_intent = None
         try:
             from hermes_prime.contracts import IntentRoot
-            from hermes_prime.signing import HMACSigner
-            signer = HMACSigner(identity="learning-engine", secret=b"hermes-prime-learning-secret")
+            from hermes_prime.secrets import get_signer as _get_signer
+            signer = _get_signer("learning")
             sig = signer.sign(b"learning-reflection")
             dummy_intent = IntentRoot(
                 intent_root=new_urn_uuid(),

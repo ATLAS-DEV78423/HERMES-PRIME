@@ -357,33 +357,34 @@ def main(argv: list[str] | None = None) -> int:
         if argv and isinstance(argv, list) and any(a in argv for a in ("--prompt", "--autonomous")):
             cmd = "__prompt__"
         else:
-            try:
-                from hermes_prime.orch.governance_hooks import GovernanceHooks
-                hooks = GovernanceHooks(sentinel, vault, trust_store, workspace)
-                if argv and isinstance(argv, list):
-                    _first = argv[0]
-                    if _first == "cron":
-                        try:
-                            import cron.scheduler as _cs
-                            hooks.apply_cron_hook(_cs)
-                        except ImportError:
-                            pass
-                    elif _first == "tools":
-                        try:
-                            import hermes_cli.tools_config as _tc
-                            if hasattr(_tc, 'toggle_tool'):
-                                _tc.toggle_tool = hooks.wrap("tools", _tc.toggle_tool)
-                        except ImportError:
-                            pass
-                    elif _first == "skills":
-                        try:
-                            import hermes_cli.skills_config as _sc
-                            if hasattr(_sc, 'install_skill'):
-                                _sc.install_skill = hooks.wrap("skills", _sc.install_skill)
-                        except ImportError:
-                            pass
-            except ImportError:
-                pass
+            if _iu.find_spec("hermes_prime.orch.governance_hooks") is not None:
+                try:
+                    from hermes_prime.orch.governance_hooks import GovernanceHooks
+                    hooks = GovernanceHooks(sentinel, vault, trust_store, workspace)
+                    if argv and isinstance(argv, list):
+                        _first = argv[0]
+                        if _first == "cron":
+                            try:
+                                import cron.scheduler as _cs
+                                hooks.apply_cron_hook(_cs)
+                            except ImportError:
+                                pass
+                        elif _first == "tools":
+                            try:
+                                import hermes_cli.tools_config as _tc
+                                if hasattr(_tc, 'toggle_tool'):
+                                    _tc.toggle_tool = hooks.wrap("tools", _tc.toggle_tool)
+                            except ImportError:
+                                pass
+                        elif _first == "skills":
+                            try:
+                                import hermes_cli.skills_config as _sc
+                                if hasattr(_sc, 'install_skill'):
+                                    _sc.install_skill = hooks.wrap("skills", _sc.install_skill)
+                            except ImportError:
+                                pass
+                except ImportError:
+                    print("warning: governance_hooks found but failed to import", file=sys.stderr)
 
             try:
                 import hermes_cli.main as upstream_main
@@ -1382,7 +1383,11 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
 
             if args.command == "chat":
-                from hermes_prime.orch.governed_cli import run_governed_chat
+                try:
+                    from hermes_prime.orch.governed_cli import run_governed_chat
+                except ImportError:
+                    print("chat requires upstream hermes-agent", file=sys.stderr)
+                    return 1
                 return run_governed_chat(
                     model=args.model,
                     scope=args.scope,
@@ -1390,7 +1395,11 @@ def main(argv: list[str] | None = None) -> int:
                 )
 
             if args.command == "gateway":
-                from hermes_prime.gateway.governed_gateway import run_governed_gateway
+                try:
+                    from hermes_prime.gateway.governed_gateway import run_governed_gateway
+                except ImportError:
+                    print("gateway requires upstream hermes-agent", file=sys.stderr)
+                    return 1
                 return run_governed_gateway(
                     platforms=args.platforms.split(","),
                 )

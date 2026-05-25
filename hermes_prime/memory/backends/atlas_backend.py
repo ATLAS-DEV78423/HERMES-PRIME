@@ -154,4 +154,23 @@ class AtlasBackend(MemoryBackend):
             return 0
 
     def gc(self, before_timestamp: str) -> int:
-        return 0
+        collection = self._get_collection()
+        try:
+            result = collection.get(include=["metadatas"])
+        except Exception:
+            return 0
+        if not result["ids"]:
+            return 0
+        to_delete: list[str] = []
+        for i, fact_id in enumerate(result["ids"]):
+            meta = result["metadatas"][i] if result["metadatas"] and len(result["metadatas"]) > i else {}
+            ts = meta.get("timestamp", "")
+            if ts < before_timestamp:
+                to_delete.append(fact_id)
+        if not to_delete:
+            return 0
+        try:
+            collection.delete(ids=to_delete)
+            return len(to_delete)
+        except Exception:
+            return 0

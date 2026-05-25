@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from hermes_prime.contracts import IntentRoot, MemoryClaim, MemoryTier, TrustState
+from hermes_prime.secrets import get_signer
 from hermes_prime.signing import HMACSigner
 from hermes_prime.utils import new_urn_uuid, sha256_text, utc_now_iso
 
@@ -32,10 +33,7 @@ class MemoryAttestation:
 
 class ProvenanceLinker:
     def __init__(self, signer: HMACSigner | None = None) -> None:
-        self.signer = signer or HMACSigner(
-            identity="atlas:provenance-linker",
-            secret=b"hermes-prime-memory-provenance-secret",
-        )
+        self.signer = signer or get_signer("memory-provenance")
 
     def attest_memory(
         self,

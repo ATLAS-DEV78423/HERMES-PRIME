@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from hermes_prime.contracts import ExaminedFile, MinerAttestation
+from hermes_prime.secrets import get_signer
 from hermes_prime.signing import HMACSigner
 from hermes_prime.utils import hash_struct, new_urn_uuid, read_text_safe, utc_now_iso
 from infrastructure.backends import BackendRegistry
@@ -31,9 +32,7 @@ class AstMiner:
         miner_version: str = "0.1.0",
     ) -> None:
         self.workspace_root = Path(workspace_root).resolve()
-        self.signer = signer or HMACSigner(
-            identity="miner:ast", secret=b"hermes-prime-ast-secret"
-        )
+        self.signer = signer or get_signer("miner")
         self.trust_store = trust_store
         self.miner_id = miner_id
         self.miner_version = miner_version

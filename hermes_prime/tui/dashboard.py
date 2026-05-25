@@ -6,8 +6,9 @@ from .banner import HERMES_PRIME_LOGO_SMALL, SENTINEL_SHIELD
 
 
 class HermesDashboard:
-    def __init__(self, use_textual: bool = True) -> None:
+    def __init__(self, use_textual: bool = True, mock: bool = True) -> None:
         self._use_textual = use_textual
+        self._mock = mock
 
     def run(self) -> int:
         if self._use_textual:
@@ -18,11 +19,13 @@ class HermesDashboard:
         return self._run_static()
 
     def _run_textual(self) -> int:
+        mock = self._mock
         from textual.app import App, ComposeResult
         from textual.containers import Container
         from textual.widgets import Header, Footer, Static
 
         class HermesApp(App):
+            _mock: bool = mock
             CSS: ClassVar[str] = """
             Screen {
                 background: black;
@@ -116,19 +119,27 @@ class HermesDashboard:
                 self.set_interval(2, self._refresh_telemetry)
 
             def _refresh_telemetry(self) -> None:
-                import random
                 telemetry = self.query_one("#telemetry", Static)
-                agents = random.randint(0, 20)
-                queue = random.randint(0, 200)
-                latency = random.uniform(5, 50)
-                mem = random.uniform(20, 80)
-                threat = random.uniform(0.0, 0.01)
+                if self._mock:
+                    import random
+                    agents = random.randint(0, 20)
+                    queue = random.randint(0, 200)
+                    latency = random.uniform(5, 50)
+                    mem = random.uniform(20, 80)
+                    threat = random.uniform(0.0, 0.01)
+                else:
+                    agents = 0
+                    queue = 0
+                    latency = 0.0
+                    mem = 0.0
+                    threat = 0.0
                 telemetry.update(self._build_telemetry_dynamic(agents, queue, latency, mem, threat))
 
             def _build_telemetry_dynamic(self, agents: int, queue: int, latency: float, mem: float, threat: float) -> str:
+                heading = "HERMES-PRIME :: LIVE TELEMETRY (SIMULATED)" if self._mock else "HERMES-PRIME :: LIVE TELEMETRY"
                 return (
                     "\u250c" + "\u2500" * 45 + "\u2510\n"
-                    "\u2502 HERMES-PRIME :: LIVE TELEMETRY            \u2502\n"
+                    f"\u2502 {heading:<44}\u2502\n"
                     "\u251c" + "\u2500" * 45 + "\u2524\n"
                     f"\u2502 AGENTS        : {agents:<30}\u2502\n"
                     f"\u2502 TASK QUEUE    : {queue:<30}\u2502\n"
@@ -148,7 +159,7 @@ class HermesDashboard:
         print()
         print(self._build_static_console())
         print()
-        print(self._build_static_telemetry())
+        print(self._build_static_telemetry(mock=self._mock))
         print()
         print("[ GOVERNANCE :: OPERATIONAL ]")
         return 0
@@ -166,10 +177,11 @@ class HermesDashboard:
             "\u2514" + "\u2500" * 45 + "\u2518"
         )
 
-    def _build_static_telemetry(self) -> str:
+    def _build_static_telemetry(self, mock: bool = True) -> str:
+        heading = "HERMES-PRIME :: LIVE TELEMETRY (SIMULATED)" if mock else "HERMES-PRIME :: LIVE TELEMETRY"
         return (
             "\u250c" + "\u2500" * 45 + "\u2510\n"
-            "\u2502 HERMES-PRIME :: LIVE TELEMETRY            \u2502\n"
+            f"\u2502 {heading:<44}\u2502\n"
             "\u251c" + "\u2500" * 45 + "\u2524\n"
             "\u2502 AGENTS        : 0                         \u2502\n"
             "\u2502 TASK QUEUE    : 0                         \u2502\n"

@@ -11,6 +11,7 @@ from hermes_prime.contracts import (
     IntentRoot,
     RiskTier,
 )
+from hermes_prime.secrets import get_signer
 from hermes_prime.signing import HMACSigner
 from hermes_prime.utils import new_urn_uuid, parse_iso8601, utc_now_iso
 from hermes_prime.utils import path_subscope
@@ -35,9 +36,7 @@ class CapabilityVault:
         registry: Optional[IntentRegistry] = None,
         trust_store: Optional[TrustStore] = None,
     ) -> None:
-        self.signer = signer or HMACSigner(
-            identity="vault:local", secret=b"hermes-prime-vault-secret"
-        )
+        self.signer = signer or get_signer("vault")
         self.registry = registry or IntentRegistry()
         self.trust_store = trust_store
         self.revoked_tokens: set[str] = set()

@@ -16,6 +16,7 @@ from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.memory.depth import DepthPolicy
 from hermes_prime.memory.provenance import MemoryAttestation, ProvenanceLinker
+from hermes_prime.secrets import get_signer
 from hermes_prime.signing import HMACSigner
 
 
@@ -50,15 +51,9 @@ class MemoryStore:
         self.depth_policy = depth_policy or DepthPolicy()
         self.knowledge_graph = knowledge_graph or KnowledgeGraph()
         self.provenance_linker = provenance_linker or ProvenanceLinker(
-            signer=signer or HMACSigner(
-                identity="atlas:memory-store",
-                secret=b"hermes-prime-memory-store-secret",
-            )
+            signer=signer or get_signer("memory-provenance"),
         )
-        self.signer = signer or HMACSigner(
-            identity="atlas:memory-store",
-            secret=b"hermes-prime-memory-store-secret",
-        )
+        self.signer = signer or get_signer("memory-store")
 
     def write(
         self,

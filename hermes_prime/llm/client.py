@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from collections.abc import Generator
 from typing import Optional
 
 
@@ -13,6 +14,7 @@ class LLMRequest:
     temperature: float = 0.7
     max_tokens: Optional[int] = None
     top_p: float = 0.95
+    stream: bool = False
 
 
 @dataclass

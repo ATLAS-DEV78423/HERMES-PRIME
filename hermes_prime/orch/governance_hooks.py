@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from hermes_prime.contracts import ActionProposal, ActionType, RiskTier
+from hermes_prime.secrets import get_signer
 from hermes_prime.signing import HMACSigner
 from hermes_prime.utils import new_urn_uuid, utc_now_iso
 
@@ -29,10 +30,7 @@ class GovernanceHooks:
         self._vault = vault
         self._trust_store = trust_store
         self._workspace_root = workspace_root
-        self._signer = signer or HMACSigner(
-            identity="hermes-governance-hooks",
-            secret=b"hermes-prime-governance",
-        )
+        self._signer = signer or get_signer("governance-hooks")
 
     def wrap(self, action_type_label: str, func: Callable) -> Callable:
         """Wrap a function with Sentinel evaluation.

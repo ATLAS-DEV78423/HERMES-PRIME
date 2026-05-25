@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..contracts import ActionType, CapabilityToken, RiskTier
+from ..utils import new_urn_uuid
 
 
 class ScopeViolation(Exception):
@@ -37,7 +38,7 @@ class CapabilityScoper:
         new_ceiling = RiskTier(f"T{new_level}")
 
         return CapabilityToken(
-            token_id=parent_token.token_id,
+            token_id=new_urn_uuid(),
             capability=parent_token.capability,
             scope=scope,
             actions=list(parent_token.actions),

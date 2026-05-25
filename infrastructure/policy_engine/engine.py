@@ -12,6 +12,7 @@ from hermes_prime.contracts import (
     RiskTier,
     SentinelDecision,
 )
+from hermes_prime.secrets import get_signer
 from hermes_prime.signing import HMACSigner
 from hermes_prime.utils import (
     contains_null_byte,
@@ -52,9 +53,7 @@ class PolicyEngine:
         signer: Optional[HMACSigner] = None,
     ) -> None:
         self.context = context
-        self.signer = signer or HMACSigner(
-            identity="sentinel:policy-kernel", secret=b"hermes-prime-policy-secret"
-        )
+        self.signer = signer or get_signer("sentinel")
         self.intent_roots: dict[str, IntentRoot] = {}
         self.turn_dispatches = 0
         self.turn_tokens = 0

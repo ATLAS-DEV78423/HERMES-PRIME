@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import time
+from collections.abc import Generator
 
 import requests
 
@@ -82,3 +84,39 @@ class VLLMClient(LLMClient):
                 tokens_used=0,
                 latency_ms=(time.time() - start_time) * 1000,
             )
+
+    def infer_stream(self, request: LLMRequest) -> Generator[str, None, None]:
+        """Stream tokens from vLLM via /v1/chat/completions with stream=True."""
+        payload = {
+            "model": request.model,
+            "messages": request.messages,
+            "temperature": request.temperature,
+            "top_p": request.top_p,
+            "stream": True,
+        }
+        if request.max_tokens is not None:
+            payload["max_tokens"] = request.max_tokens
+
+        with self.session.post(
+            f"{self.base_url}/v1/chat/completions",
+            json=payload,
+            stream=True,
+            timeout=120,
+        ) as response:
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                decoded = line.decode("utf-8") if isinstance(line, bytes) else line
+                if not decoded.startswith("data: "):
+                    continue
+                data_str = decoded.removeprefix("data: ")
+                if data_str.strip() == "[DONE]":
+                    break
+                try:
+                    data = json.loads(data_str)
+                    delta = data.get("choices", [{}])[0].get("delta", {})
+                    token = delta.get("content", "")
+                    if token:
+                        yield token
+                except json.JSONDecodeError:
+                    continue

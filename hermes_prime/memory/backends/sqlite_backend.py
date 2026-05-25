@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import re
+import sqlite3
 from pathlib import Path
 
 from hermes_prime.contracts import MemoryClaim
@@ -34,6 +36,13 @@ class SQLiteMemoryBackend(MemoryBackend):
             CREATE INDEX IF NOT EXISTS idx_memory_intent_root ON memory_claims(intent_root);
             CREATE INDEX IF NOT EXISTS idx_memory_created_at ON memory_claims(created_at);
         """)
+        try:
+            self.conn.execute(
+                "CREATE VIRTUAL TABLE IF NOT EXISTS memory_claims_fts "
+                "USING fts5(fact_id UNINDEXED, claim_text, trust_state, tier)"
+            )
+        except sqlite3.OperationalError:
+            pass
         self.conn.commit()
 
     def store(self, claim: MemoryClaim) -> None:
@@ -57,6 +66,14 @@ class SQLiteMemoryBackend(MemoryBackend):
             """,
             (claim.fact_id, payload_json, state, tier, contradictions, claim.intent_root, now, now),
         )
+        try:
+            claim_text = payload.get("claim", "")
+            self.conn.execute(
+                "INSERT OR REPLACE INTO memory_claims_fts(fact_id, claim_text, trust_state, tier) VALUES (?, ?, ?, ?)",
+                (claim.fact_id, claim_text, state, tier),
+            )
+        except sqlite3.OperationalError:
+            pass
         self.conn.commit()
 
     def get(self, fact_id: str) -> MemoryClaim | None:
@@ -68,7 +85,27 @@ class SQLiteMemoryBackend(MemoryBackend):
         data = json.loads(row["payload"])
         return MemoryClaim(**data)
 
+    def _build_fts_query(self, query: str) -> str:
+        cleaned = re.sub(r'["()+\-~^*]', '', query)
+        words = [w for w in cleaned.split() if w.upper() not in ('AND', 'OR', 'NOT', 'NEAR')]
+        terms = [f'"{w}"*' for w in words if w]
+        return ' AND '.join(terms)
+
     def search(self, query: str, limit: int = 10) -> list[MemorySearchResult]:
+        try:
+            fts_query = self._build_fts_query(query)
+            rows = self.conn.execute(
+                "SELECT payload FROM memory_claims "
+                "WHERE fact_id IN ("
+                "    SELECT fact_id FROM memory_claims_fts "
+                "    WHERE claim_text MATCH ? "
+                "    ORDER BY rank"
+                ") LIMIT ?",
+                (fts_query, limit),
+            ).fetchall()
+            return [MemorySearchResult.from_claim(MemoryClaim(**json.loads(row["payload"]))) for row in rows]
+        except sqlite3.OperationalError:
+            pass
         query_lower = query.lower()
         rows = self.conn.execute(
             "SELECT payload FROM memory_claims ORDER BY created_at DESC"

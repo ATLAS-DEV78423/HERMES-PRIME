@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from ..contracts import AgentNode, AgentStatus, AgentSpawnAttestation
@@ -20,10 +23,112 @@ class DepthLimitError(AgentMeshError):
 
 
 class AgentMesh:
-    def __init__(self, max_depth: int = 5) -> None:
+    def __init__(self, max_depth: int = 5, db_path: str | None = None) -> None:
         self._nodes: dict[str, AgentNode] = {}
         self._children_of: dict[str, set[str]] = {}
         self._max_depth = max_depth
+        self._conn: sqlite3.Connection | None = None
+        if db_path is not None:
+            resolved = Path(db_path).resolve()
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            self._conn = sqlite3.connect(str(resolved))
+            self._conn.row_factory = sqlite3.Row
+            self._init_schema()
+            self._load_from_db()
+
+    def _init_schema(self) -> None:
+        self._conn.executescript("""
+            PRAGMA journal_mode=WAL;
+            CREATE TABLE IF NOT EXISTS agent_mesh (
+                agent_id TEXT PRIMARY KEY,
+                parent_id TEXT,
+                intent_root TEXT NOT NULL,
+                capability_scope TEXT NOT NULL,
+                capability_token TEXT,
+                spawned_by TEXT,
+                spawned_at TEXT NOT NULL,
+                completed_at TEXT,
+                status TEXT NOT NULL,
+                depth INTEGER NOT NULL,
+                task_description TEXT NOT NULL,
+                result TEXT,
+                attestation TEXT
+            );
+        """)
+        self._conn.commit()
+
+    def _load_from_db(self) -> None:
+        rows = self._conn.execute("SELECT * FROM agent_mesh").fetchall()
+        for row in rows:
+            node = self._row_to_node(row)
+            self._nodes[node.agent_id] = node
+            if node.parent_id:
+                self._children_of.setdefault(node.parent_id, set()).add(node.agent_id)
+
+    @staticmethod
+    def _row_to_node(row: sqlite3.Row) -> AgentNode:
+        result = json.loads(row["result"]) if row["result"] else None
+        attestation = json.loads(row["attestation"]) if row["attestation"] else None
+        return AgentNode(
+            agent_id=row["agent_id"],
+            parent_id=row["parent_id"],
+            intent_root=row["intent_root"],
+            capability_scope=row["capability_scope"],
+            capability_token=row["capability_token"],
+            spawned_by=row["spawned_by"],
+            spawned_at=row["spawned_at"],
+            completed_at=row["completed_at"],
+            status=AgentStatus(row["status"]),
+            depth=row["depth"],
+            task_description=row["task_description"],
+            result=result,
+            attestation=AgentSpawnAttestation(**attestation) if attestation else None,
+        )
+
+    def _persist_upsert(self, node: AgentNode) -> None:
+        if self._conn is None:
+            return
+        self._conn.execute(
+            """
+            INSERT INTO agent_mesh(agent_id, parent_id, intent_root, capability_scope, capability_token, spawned_by, spawned_at, completed_at, status, depth, task_description, result, attestation)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(agent_id) DO UPDATE SET
+                parent_id=excluded.parent_id,
+                intent_root=excluded.intent_root,
+                capability_scope=excluded.capability_scope,
+                capability_token=excluded.capability_token,
+                spawned_by=excluded.spawned_by,
+                spawned_at=excluded.spawned_at,
+                completed_at=excluded.completed_at,
+                status=excluded.status,
+                depth=excluded.depth,
+                task_description=excluded.task_description,
+                result=excluded.result,
+                attestation=excluded.attestation
+            """,
+            (
+                node.agent_id,
+                node.parent_id,
+                node.intent_root,
+                node.capability_scope,
+                node.capability_token,
+                node.spawned_by,
+                node.spawned_at,
+                node.completed_at,
+                node.status.value,
+                node.depth,
+                node.task_description,
+                json.dumps(node.result) if node.result else None,
+                json.dumps(node.attestation.to_dict()) if node.attestation else None,
+            ),
+        )
+        self._conn.commit()
+
+    def _persist_delete(self, agent_id: str) -> None:
+        if self._conn is None:
+            return
+        self._conn.execute("DELETE FROM agent_mesh WHERE agent_id=?", (agent_id,))
+        self._conn.commit()
 
     def register_agent(
         self,
@@ -63,6 +168,7 @@ class AgentMesh:
         self._nodes[agent_id] = node
         if parent_id and parent_id in self._nodes:
             self._children_of.setdefault(parent_id, set()).add(agent_id)
+        self._persist_upsert(node)
         return node
 
     def transition(self, agent_id: str, status: AgentStatus) -> AgentNode:
@@ -70,6 +176,7 @@ class AgentMesh:
         if status == AgentStatus.COMPLETED or status == AgentStatus.FAILED:
             node.completed_at = datetime.now(timezone.utc).isoformat()
         node.status = status
+        self._persist_upsert(node)
         return node
 
     def attach_attestation(
@@ -88,11 +195,13 @@ class AgentMesh:
             signature=f"mesh::{agent_id}::{now}",
         )
         node.attestation = attestation
+        self._persist_upsert(node)
         return attestation
 
     def store_result(self, agent_id: str, result: dict[str, Any]) -> None:
         node = self._get(agent_id)
         node.result = result
+        self._persist_upsert(node)
 
     def get(self, agent_id: str) -> AgentNode | None:
         return self._nodes.get(agent_id)
@@ -138,6 +247,7 @@ class AgentMesh:
         node = self._nodes[agent_id]
         if node.parent_id and node.parent_id in self._children_of:
             self._children_of[node.parent_id].discard(agent_id)
+        self._persist_delete(agent_id)
         del self._nodes[agent_id]
 
     def _get(self, agent_id: str) -> AgentNode:

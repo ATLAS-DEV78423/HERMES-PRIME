@@ -18,6 +18,7 @@ from hermes_prime.learning.engine import LearningEngine
 from hermes_prime.memory import MemoryStore, DepthPolicy
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
 from hermes_prime.llm.prompt_builder import PromptBuilder
+from hermes_prime.secrets import get_signer
 from hermes_prime.signing import HMACSigner
 from hermes_prime.utils import new_urn_uuid, utc_now_iso
 from infrastructure.policy_engine.sentinel_service import SentinelService
@@ -25,7 +26,9 @@ from infrastructure.sandboxed_forge.forge import SandboxedForge
 from infrastructure.trust_store import TrustStore
 from infrastructure.vault.capabilities import CapabilityVault
 from pathlib import Path
-from hermes_prime.llm.client import LLMClient, LLMRequest
+from hermes_prime.llm.client import LLMClient, LLMRequest, LLMResponse
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from requests.exceptions import ConnectionError, Timeout
 
 
 @dataclass
@@ -64,7 +67,7 @@ class AutonomousExecutor:
         self.trust_store = trust_store
         self.forge = forge or SandboxedForge(workspace_root)
         self.workspace_root = Path(workspace_root).resolve()
-        self.signer = signer or HMACSigner(identity="hermes-autonomous", secret=b"default-dev-secret")
+        self.signer = signer or get_signer("autonomous")
         self.prompt_builder = PromptBuilder(str(self.workspace_root))
         self.memory_store = MemoryStore(
             backend=SQLiteMemoryBackend(self.workspace_root / ".hermes-prime" / "memory.db"),
@@ -142,7 +145,23 @@ class AutonomousExecutor:
                 temperature=0.7,
                 max_tokens=1024,
             )
-            llm_response = self.llm_client.infer(llm_request)
+            try:
+                llm_response = self._infer_with_retry(llm_request)
+            except (ConnectionError, Timeout) as retry_err:
+                trace_id = new_urn_uuid()
+                result = AutonomousExecutionResult(
+                    execution_id=execution_id,
+                    task_prompt=task_prompt,
+                    trace_id=trace_id,
+                    inference_attestation=None,
+                    proposal=None,
+                    sentinel_decision=None,
+                    execution_status="inference_error",
+                    error_message=f"LLM inference failed after retries: {retry_err}",
+                    summary=f"Autonomous execution failed after 3 retries: {retry_err}",
+                )
+                self._record_outcome(task_prompt, "", "", False, False, 0, 0, model, utc_now_iso())
+                return result
 
             # Create signed inference attestation
             inference_signature = self.signer.sign(llm_response.message_content.encode("utf-8"))
@@ -294,6 +313,10 @@ class AutonomousExecutor:
 
             self._record_outcome(task_prompt, "", "", False, False, 0, 0, model, utc_now_iso())
             return result
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)))
+    def _infer_with_retry(self, request: LLMRequest) -> LLMResponse:
+        return self.llm_client.infer(request)
 
     def _record_outcome(
         self,

@@ -6,7 +6,10 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
-import run_agent as upstream_agent
+try:
+    import run_agent as upstream_agent
+except ImportError:
+    upstream_agent = None  # type: ignore
 
 from hermes_prime.contracts import ActionProposal, ActionType, RiskTier
 from hermes_prime.secrets import get_signer
@@ -31,11 +34,21 @@ class GovernedAgentWrapper:
         self._workspace_root = workspace_root
         self._signer = signer or get_signer("governed-agent")
 
-    def create_governed_agent(self, **kwargs) -> upstream_agent.AIAgent:
+    def create_governed_agent(self, **kwargs):
         self._patch_handle_function_call()
+        if upstream_agent is None:
+            raise RuntimeError(
+                "upstream_agent (run_agent) is not available. "
+                "Ensure external/hermes-agent is on sys.path or install the package."
+            )
         return upstream_agent.AIAgent(**kwargs)
 
     def _patch_handle_function_call(self) -> None:
+        if upstream_agent is None:
+            raise RuntimeError(
+                "upstream_agent (run_agent) is not available. "
+                "Ensure external/hermes-agent is on sys.path or install the package."
+            )
         original = upstream_agent.handle_function_call
 
         def governed(

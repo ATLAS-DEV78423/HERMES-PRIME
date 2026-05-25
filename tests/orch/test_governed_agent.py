@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from hermes_prime.orch.governed_agent import GovernedAgentWrapper
+from hermes_prime.orch.governed_agent import GovernedAgentWrapper, upstream_agent
 
 
 @pytest.fixture
@@ -38,12 +38,12 @@ def test_rejected_tool_returns_error(mock_infrastructure):
         "denial_reason": "test: all actions denied",
     }
     wrapper = GovernedAgentWrapper(sentinel, vault, forge, trust_store)
-    wrapper._patch_handle_function_call()
-    import run_agent as ra
+    with patch("hermes_prime.orch.governed_agent.upstream_agent") as mu:
+        wrapper._patch_handle_function_call()
 
-    result = ra.handle_function_call("read", {"path": "/etc"})
-    parsed = json.loads(result)
-    assert "rejected" in parsed["error"].lower()
+        result = mu.handle_function_call("read", {"path": "/etc"})
+        parsed = json.loads(result)
+        assert "rejected" in parsed["error"].lower()
 
 
 def test_approved_tool_calls_original(mock_infrastructure):
@@ -53,10 +53,8 @@ def test_approved_tool_calls_original(mock_infrastructure):
         original_handler = Mock(return_value='{"ok": true}')
         mu.handle_function_call = original_handler
         wrapper._patch_handle_function_call()
-        import run_agent as ra
 
-        ra.handle_function_call = mu.handle_function_call
-        result = ra.handle_function_call("read", {"path": "test.txt"})
+        result = mu.handle_function_call("read", {"path": "test.txt"})
         assert json.loads(result) == {"ok": True}
         assert original_handler.called
 
@@ -67,18 +65,13 @@ def test_audit_trace_stored_on_approval(mock_infrastructure):
     with patch("hermes_prime.orch.governed_agent.upstream_agent") as mu:
         mu.handle_function_call = Mock(return_value="{}")
         wrapper._patch_handle_function_call()
-        import run_agent as ra
 
-        ra.handle_function_call = mu.handle_function_call
-        ra.handle_function_call("read", {"path": "test.txt"})
+        mu.handle_function_call("read", {"path": "test.txt"})
         assert trust_store.store_audit_trace.called
 
 
 def test_governed_agent_rejects_unauthorized_tool():
     """End-to-end: governed agent rejects a tool call that violates policy."""
-    import json
-    from unittest.mock import Mock
-
     from hermes_prime.orch.governed_agent import GovernedAgentWrapper
 
     sentinel = Mock()
@@ -93,11 +86,11 @@ def test_governed_agent_rejects_unauthorized_tool():
     trust_store = Mock()
 
     wrapper = GovernedAgentWrapper(sentinel, vault, forge, trust_store)
-    wrapper._patch_handle_function_call()
+    with patch("hermes_prime.orch.governed_agent.upstream_agent") as mu:
+        wrapper._patch_handle_function_call()
 
-    import run_agent as ra
-    result = ra.handle_function_call("read", {"path": "/etc/passwd"})
-    parsed = json.loads(result)
-    assert "rejected" in parsed["error"].lower()
-    assert sentinel.evaluate.called
-    assert vault.mint_capability.called
+        result = mu.handle_function_call("read", {"path": "/etc/passwd"})
+        parsed = json.loads(result)
+        assert "rejected" in parsed["error"].lower()
+        assert sentinel.evaluate.called
+        assert vault.mint_capability.called

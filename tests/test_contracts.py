@@ -60,6 +60,19 @@ class ContractTests(unittest.TestCase):
         self.assertTrue(trust_transition_allowed(TrustState.ATTESTED, TrustState.VALIDATED))
         self.assertFalse(trust_transition_allowed(TrustState.EXECUTABLE, TrustState.ATTESTED))
 
+    def test_new_action_types_are_defined(self) -> None:
+        self.assertEqual(ActionType.WEB_SEARCH.value, "web.search")
+        self.assertEqual(ActionType.BROWSER_NAVIGATE.value, "browser.navigate")
+        self.assertEqual(ActionType.VOICE_SPEAK.value, "voice.speak")
+        self.assertEqual(ActionType.VISION_ANALYZE.value, "vision.analyze")
+        self.assertEqual(ActionType.CODE_EXECUTE.value, "code.execute")
+        self.assertEqual(ActionType.SKILLS_READ.value, "skills.read")
+        self.assertEqual(ActionType.KANBAN_READ.value, "kanban.read")
+        self.assertEqual(ActionType.MCP_CALL.value, "mcp.call")
+        self.assertEqual(ActionType.SESSION_SEARCH.value, "session.search")
+        all_values = [e.value for e in ActionType]
+        self.assertEqual(len(all_values), len(set(all_values)))
+
 
 if __name__ == "__main__":
     unittest.main()

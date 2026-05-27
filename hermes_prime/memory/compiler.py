@@ -87,6 +87,7 @@ class TrustFilter:
             trust = _trust_score(r.trust_state)
             sim = r.similarity if hasattr(r, "similarity") else 0.0
             return (trust, sim)
+
         return sorted(results, key=_score, reverse=True)
 
 
@@ -120,23 +121,27 @@ class ChainCompressor:
             for d_id in descendants:
                 if d_id in result_by_id:
                     chain_claims.append(result_by_id[d_id].claim)
-            chains.append(CompressedChain(
-                root_id=root_id,
-                root_claim=root_result.claim,
-                depth=len(chain_ids),
-                summary=" | ".join(chain_claims),
-                fact_ids=chain_ids,
-            ))
+            chains.append(
+                CompressedChain(
+                    root_id=root_id,
+                    root_claim=root_result.claim,
+                    depth=len(chain_ids),
+                    summary=" | ".join(chain_claims),
+                    fact_ids=chain_ids,
+                )
+            )
 
         for r in results:
             if r.fact_id and r.fact_id not in seen:
-                chains.append(CompressedChain(
-                    root_id=r.fact_id,
-                    root_claim=r.claim,
-                    depth=1,
-                    summary=r.claim,
-                    fact_ids=[r.fact_id],
-                ))
+                chains.append(
+                    CompressedChain(
+                        root_id=r.fact_id,
+                        root_claim=r.claim,
+                        depth=1,
+                        summary=r.claim,
+                        fact_ids=[r.fact_id],
+                    )
+                )
 
         return chains
 
@@ -180,7 +185,7 @@ class ContextCompiler:
         )
 
         ranked = self.trust_filter.rank(filtered)
-        truncated = ranked[:query.limit]
+        truncated = ranked[: query.limit]
 
         trust_dist: dict[str, int] = {}
         for r in truncated:

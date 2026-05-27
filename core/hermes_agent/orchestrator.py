@@ -74,9 +74,7 @@ class HermesPrimeOrchestrator:
                 self.ast_miner.extract_symbols(scope=scope).to_dict(),
             ]
 
-            intent = self.vault.register_intent_root(
-                scope=scope, issued_to="hermes:session:local"
-            )
+            intent = self.vault.register_intent_root(scope=scope, issued_to="hermes:session:local")
             self.policy.register_intent_root(intent)
 
             action_type = self._infer_action(prompt)
@@ -84,9 +82,7 @@ class HermesPrimeOrchestrator:
                 action_id=new_urn_uuid(),
                 action_type=action_type,
                 scope=scope,
-                risk_tier=RiskTier.T0
-                if action_type == ActionType.FILESYSTEM_READ
-                else RiskTier.T1,
+                risk_tier=RiskTier.T0 if action_type == ActionType.FILESYSTEM_READ else RiskTier.T1,
                 intent_root=intent.intent_root,
                 capability="cap:file-read:scoped"
                 if action_type == ActionType.FILESYSTEM_READ
@@ -147,7 +143,13 @@ class HermesPrimeOrchestrator:
             return ActionType.FILESYSTEM_READ
         return ActionType.FILESYSTEM_READ
 
-    def _summarize(self, prompt: str, classification: dict[str, Any], augmentation: dict[str, Any], decision: dict[str, Any]) -> str:
+    def _summarize(
+        self,
+        prompt: str,
+        classification: dict[str, Any],
+        augmentation: dict[str, Any],
+        decision: dict[str, Any],
+    ) -> str:
         return (
             f"Prompt classified as {classification['task_types']} in domain {classification['domain']}. "
             f"Pattern guidance: {', '.join(augmentation['reasoning_style']) or 'n/a'}. "

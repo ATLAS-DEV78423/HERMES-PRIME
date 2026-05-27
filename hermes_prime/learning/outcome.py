@@ -102,13 +102,25 @@ class OutcomeStore:
         if total == 0:
             return {"total": 0}
 
-        approved = self._conn.execute("SELECT COUNT(*) FROM outcomes WHERE approved = 1").fetchone()[0]
-        parseable_count = self._conn.execute("SELECT COUNT(*) FROM outcomes WHERE parseable = 1").fetchone()[0]
-        rejected_total = self._conn.execute("SELECT COUNT(*) FROM outcomes WHERE parseable = 1 AND approved = 0").fetchone()[0]
-        parse_failures = self._conn.execute("SELECT COUNT(*) FROM outcomes WHERE parseable = 0").fetchone()[0]
+        approved = self._conn.execute(
+            "SELECT COUNT(*) FROM outcomes WHERE approved = 1"
+        ).fetchone()[0]
+        parseable_count = self._conn.execute(
+            "SELECT COUNT(*) FROM outcomes WHERE parseable = 1"
+        ).fetchone()[0]
+        rejected_total = self._conn.execute(
+            "SELECT COUNT(*) FROM outcomes WHERE parseable = 1 AND approved = 0"
+        ).fetchone()[0]
+        parse_failures = self._conn.execute(
+            "SELECT COUNT(*) FROM outcomes WHERE parseable = 0"
+        ).fetchone()[0]
 
-        avg_latency = self._conn.execute("SELECT AVG(latency_ms) FROM outcomes").fetchone()[0] or 0.0
-        avg_tokens = self._conn.execute("SELECT AVG(tokens_used) FROM outcomes").fetchone()[0] or 0.0
+        avg_latency = (
+            self._conn.execute("SELECT AVG(latency_ms) FROM outcomes").fetchone()[0] or 0.0
+        )
+        avg_tokens = (
+            self._conn.execute("SELECT AVG(tokens_used) FROM outcomes").fetchone()[0] or 0.0
+        )
 
         blocking_layers = self._conn.execute(
             "SELECT blocking_layer, COUNT(*) as cnt FROM outcomes WHERE approved = 0 AND blocking_layer IS NOT NULL GROUP BY blocking_layer ORDER BY cnt DESC"

@@ -161,6 +161,7 @@ class LearningEngine:
     def _extract_task_patterns(self, outcomes: list) -> int:
         """Extract patterns about what types of tasks are handled well."""
         from collections import Counter
+
         task_keywords: Counter = Counter()
         approved_tasks = [o.task_prompt for o in outcomes if o.approved]
 
@@ -229,11 +230,13 @@ class LearningEngine:
 
         pattern_summaries = []
         for p in patterns:
-            pattern_summaries.append({
-                "text": p.content,
-                "type": p.pattern_type,
-                "source_fact_ids": p.source_outcomes[:3],
-            })
+            pattern_summaries.append(
+                {
+                    "text": p.content,
+                    "type": p.pattern_type,
+                    "source_fact_ids": p.source_outcomes[:3],
+                }
+            )
 
         summary = (
             f"Learning loop reflected on {self.outcome_store.count()} execution outcomes. "
@@ -245,6 +248,7 @@ class LearningEngine:
         try:
             from hermes_prime.contracts import IntentRoot
             from hermes_prime.secrets import get_signer as _get_signer
+
             signer = _get_signer("learning")
             sig = signer.sign(b"learning-reflection")
             dummy_intent = IntentRoot(

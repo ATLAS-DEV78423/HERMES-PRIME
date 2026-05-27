@@ -69,9 +69,7 @@ class FileMiner:
             ext = "." + ext
         return self.find_by_glob(f"**/*{ext}", budget)
 
-    def find_large(
-        self, min_bytes: int, budget: FileMinerBudget | None = None
-    ) -> MinerAttestation:
+    def find_large(self, min_bytes: int, budget: FileMinerBudget | None = None) -> MinerAttestation:
         budget = budget or FileMinerBudget()
         start = time.monotonic()
         matches: list[dict[str, Any]] = []

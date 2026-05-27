@@ -50,10 +50,34 @@ def _extract_entities(text: str) -> list[tuple[str, str]]:
     for m in re.finditer(r"\b[A-Z][a-z]+\b", text):
         raw = m.group(0)
         if raw.lower() not in seen:
-            skip = {"The", "This", "That", "These", "Those", "It", "Its",
-                    "A", "An", "And", "Or", "But", "Not", "For", "With",
-                    "From", "Into", "Over", "Under", "After", "Before",
-                    "Between", "Through", "During", "Without", "Within"}
+            skip = {
+                "The",
+                "This",
+                "That",
+                "These",
+                "Those",
+                "It",
+                "Its",
+                "A",
+                "An",
+                "And",
+                "Or",
+                "But",
+                "Not",
+                "For",
+                "With",
+                "From",
+                "Into",
+                "Over",
+                "Under",
+                "After",
+                "Before",
+                "Between",
+                "Through",
+                "During",
+                "Without",
+                "Within",
+            }
             if raw not in skip:
                 seen.add(raw.lower())
                 entities.append((raw, "NOUN"))
@@ -88,6 +112,7 @@ class Mem0Backend(MemoryBackend):
         if not self._chroma_available:
             raise RuntimeError("ChromaDB not installed. Install with: pip install chromadb")
         import chromadb
+
         client = chromadb.PersistentClient(path=str(self.chroma_path))
         self._memory_collection = client.get_or_create_collection(
             name="mem0_memory",
@@ -101,24 +126,32 @@ class Mem0Backend(MemoryBackend):
 
     def store(self, claim: MemoryClaim) -> None:
         mem_coll, ent_coll = self._get_collections()
-        tier = claim.tier.value if hasattr(claim.tier, 'value') else claim.tier
-        state = claim.trust_state.value if hasattr(claim.trust_state, 'value') else claim.trust_state
+        tier = claim.tier.value if hasattr(claim.tier, "value") else claim.tier
+        state = (
+            claim.trust_state.value if hasattr(claim.trust_state, "value") else claim.trust_state
+        )
 
         mem_coll.upsert(
             ids=[claim.fact_id],
             documents=[claim.claim],
-            metadatas=[{
-                "fact_id": claim.fact_id,
-                "source_agent": claim.source.get("agent", "unknown") if isinstance(claim.source, dict) else "unknown",
-                "source_trust": claim.source_trust,
-                "verification_status": claim.verification_status,
-                "epistemic_confidence": str(claim.epistemic_confidence),
-                "tier": tier,
-                "trust_state": state,
-                "intent_root": claim.intent_root,
-                "timestamp": claim.timestamp,
-                "memory_type": claim.source.get("memory_type", "episodic") if isinstance(claim.source, dict) else "episodic",
-            }],
+            metadatas=[
+                {
+                    "fact_id": claim.fact_id,
+                    "source_agent": claim.source.get("agent", "unknown")
+                    if isinstance(claim.source, dict)
+                    else "unknown",
+                    "source_trust": claim.source_trust,
+                    "verification_status": claim.verification_status,
+                    "epistemic_confidence": str(claim.epistemic_confidence),
+                    "tier": tier,
+                    "trust_state": state,
+                    "intent_root": claim.intent_root,
+                    "timestamp": claim.timestamp,
+                    "memory_type": claim.source.get("memory_type", "episodic")
+                    if isinstance(claim.source, dict)
+                    else "episodic",
+                }
+            ],
         )
 
         entities = _extract_entities(claim.claim)
@@ -132,7 +165,11 @@ class Mem0Backend(MemoryBackend):
         existing_map: dict[str, set[str]] = {}
         if existing and existing.get("ids"):
             for i, eid in enumerate(existing["ids"]):
-                meta = existing["metadatas"][i] if existing.get("metadatas") and i < len(existing["metadatas"]) else {}
+                meta = (
+                    existing["metadatas"][i]
+                    if existing.get("metadatas") and i < len(existing["metadatas"])
+                    else {}
+                )
                 linked = meta.get("linked_fact_ids", "")
                 existing_map[eid] = set(linked.split(",")) if linked else set()
 
@@ -143,11 +180,13 @@ class Mem0Backend(MemoryBackend):
             ent_coll.upsert(
                 ids=[eid],
                 documents=[entity_text],
-                metadatas=[{
-                    "entity_text": entity_text,
-                    "entity_type": entity_type,
-                    "linked_fact_ids": ",".join(sorted(linked_ids)),
-                }],
+                metadatas=[
+                    {
+                        "entity_text": entity_text,
+                        "entity_type": entity_type,
+                        "linked_fact_ids": ",".join(sorted(linked_ids)),
+                    }
+                ],
             )
 
     def get(self, fact_id: str) -> MemoryClaim | None:
@@ -187,45 +226,62 @@ class Mem0Backend(MemoryBackend):
                     )
                     if ent_results and ent_results.get("ids") and ent_results["ids"][0]:
                         for i in range(len(ent_results["ids"][0])):
-                            meta = (ent_results["metadatas"][0][i]
-                                    if ent_results.get("metadatas") and len(ent_results["metadatas"][0]) > i
-                                    else {})
+                            meta = (
+                                ent_results["metadatas"][0][i]
+                                if ent_results.get("metadatas")
+                                and len(ent_results["metadatas"][0]) > i
+                                else {}
+                            )
                             linked = meta.get("linked_fact_ids", "")
                             if linked:
-                                boost_ids.update(fid.strip() for fid in linked.split(",") if fid.strip())
+                                boost_ids.update(
+                                    fid.strip() for fid in linked.split(",") if fid.strip()
+                                )
                 except Exception:
                     continue
 
         output: list[MemorySearchResult] = []
         for i, fact_id in enumerate(results["ids"][0]):
-            doc = (results["documents"][0][i]
-                   if results.get("documents") and len(results["documents"][0]) > i
-                   else "")
-            meta = (results["metadatas"][0][i]
-                    if results.get("metadatas") and len(results["metadatas"][0]) > i
-                    else {})
-            distance = (results["distances"][0][i]
-                        if results.get("distances") and len(results["distances"][0]) > i
-                        else 0.0)
+            doc = (
+                results["documents"][0][i]
+                if results.get("documents") and len(results["documents"][0]) > i
+                else ""
+            )
+            meta = (
+                results["metadatas"][0][i]
+                if results.get("metadatas") and len(results["metadatas"][0]) > i
+                else {}
+            )
+            distance = (
+                results["distances"][0][i]
+                if results.get("distances") and len(results["distances"][0]) > i
+                else 0.0
+            )
             similarity = max(0.0, 1.0 - float(distance))
 
             if fact_id in boost_ids:
                 similarity = similarity + (1.0 - similarity) * _ENTITY_BOOST_WEIGHT
 
-            output.append(MemorySearchResult(
-                fact_id=fact_id,
-                claim=doc,
-                source={"backend": "mem0", "collection": "mem0_memory", "agent": meta.get("source_agent", "unknown")},
-                epistemic_confidence=float(meta.get("epistemic_confidence", "0.0")),
-                verification_status=meta.get("verification_status", "unverified"),
-                source_trust=meta.get("source_trust", "unknown"),
-                timestamp=meta.get("timestamp", utc_now_iso()),
-                trust_state=meta.get("trust_state", TrustState.UNVERIFIED.value),
-                tier=meta.get("tier", MemoryTier.QUARANTINE.value),
-                contradictions=[],
-                intent_root=meta.get("intent_root", ""),
-                similarity=min(similarity, 1.0),
-            ))
+            output.append(
+                MemorySearchResult(
+                    fact_id=fact_id,
+                    claim=doc,
+                    source={
+                        "backend": "mem0",
+                        "collection": "mem0_memory",
+                        "agent": meta.get("source_agent", "unknown"),
+                    },
+                    epistemic_confidence=float(meta.get("epistemic_confidence", "0.0")),
+                    verification_status=meta.get("verification_status", "unverified"),
+                    source_trust=meta.get("source_trust", "unknown"),
+                    timestamp=meta.get("timestamp", utc_now_iso()),
+                    trust_state=meta.get("trust_state", TrustState.UNVERIFIED.value),
+                    tier=meta.get("tier", MemoryTier.QUARANTINE.value),
+                    contradictions=[],
+                    intent_root=meta.get("intent_root", ""),
+                    similarity=min(similarity, 1.0),
+                )
+            )
 
         output.sort(key=lambda r: r.similarity, reverse=True)
         return output[:limit]
@@ -306,12 +362,16 @@ class Mem0Backend(MemoryBackend):
             pass
 
     def _claim_from_result(self, result: dict, index: int) -> MemoryClaim:
-        doc = (result["documents"][index]
-               if result.get("documents") and len(result["documents"]) > index
-               else "")
-        meta = (result["metadatas"][index]
-                if result.get("metadatas") and len(result["metadatas"]) > index
-                else {})
+        doc = (
+            result["documents"][index]
+            if result.get("documents") and len(result["documents"]) > index
+            else ""
+        )
+        meta = (
+            result["metadatas"][index]
+            if result.get("metadatas") and len(result["metadatas"]) > index
+            else {}
+        )
         return MemoryClaim(
             fact_id=result["ids"][index],
             claim=doc or "",

@@ -179,9 +179,7 @@ class TestOllamaClient(unittest.TestCase):
         client.session = MagicMock()
         client.session.get.return_value.status_code = 200
         self.assertTrue(client.health_check())
-        client.session.get.assert_called_once_with(
-            "http://localhost:11434/api/tags", timeout=5
-        )
+        client.session.get.assert_called_once_with("http://localhost:11434/api/tags", timeout=5)
 
     def test_health_check_returns_false_on_non_200(self):
         client = OllamaClient()
@@ -263,6 +261,7 @@ class TestOllamaClient(unittest.TestCase):
 
     def test_session_is_requests_session(self):
         import requests
+
         client = OllamaClient()
         self.assertIsInstance(client.session, requests.Session)
 
@@ -281,9 +280,7 @@ class TestVLLMClient(unittest.TestCase):
         client.session = MagicMock()
         client.session.get.return_value.status_code = 200
         self.assertTrue(client.health_check())
-        client.session.get.assert_called_once_with(
-            "http://localhost:8000/health", timeout=5
-        )
+        client.session.get.assert_called_once_with("http://localhost:8000/health", timeout=5)
 
     def test_health_check_returns_false_on_non_200(self):
         client = VLLMClient()
@@ -384,6 +381,7 @@ class TestVLLMClient(unittest.TestCase):
 
     def test_session_is_requests_session(self):
         import requests
+
         client = VLLMClient()
         self.assertIsInstance(client.session, requests.Session)
 
@@ -391,10 +389,12 @@ class TestVLLMClient(unittest.TestCase):
 class TestLLMClientInheritance(unittest.TestCase):
     def test_ollama_is_llm_client(self):
         from hermes_prime.llm.client import LLMClient
+
         self.assertTrue(issubclass(OllamaClient, LLMClient))
 
     def test_vllm_is_llm_client(self):
         from hermes_prime.llm.client import LLMClient
+
         self.assertTrue(issubclass(VLLMClient, LLMClient))
 
 

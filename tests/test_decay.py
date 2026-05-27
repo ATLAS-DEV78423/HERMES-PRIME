@@ -81,15 +81,27 @@ class TestDecayPolicy(unittest.TestCase):
         self.assertLess(ratio, 0.1)
 
     def test_effective_age_ratio_old(self):
-        old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=180)).isoformat().replace("+00:00", "Z")
+        old = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=180))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         claim = _make_claim(memory_type="episodic", timestamp=old)
         ratio = self.policy.effective_age_ratio(claim)
         self.assertGreater(ratio, 1.0)
 
     def test_unverified_decays_faster(self):
-        old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=45)).isoformat().replace("+00:00", "Z")
-        unverified = _make_claim(memory_type="episodic", trust_state=TrustState.UNVERIFIED, timestamp=old)
-        validated = _make_claim(memory_type="episodic", trust_state=TrustState.VALIDATED, timestamp=old)
+        old = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=45))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+        unverified = _make_claim(
+            memory_type="episodic", trust_state=TrustState.UNVERIFIED, timestamp=old
+        )
+        validated = _make_claim(
+            memory_type="episodic", trust_state=TrustState.VALIDATED, timestamp=old
+        )
         uv_ratio = self.policy.effective_age_ratio(unverified)
         val_ratio = self.policy.effective_age_ratio(validated)
         self.assertGreater(uv_ratio, val_ratio)
@@ -123,7 +135,11 @@ class TestAccessTracker(unittest.TestCase):
         self.assertEqual(self.tracker.get_access_count("nonexistent"), 0)
 
     def test_get_access_count_since(self):
-        yesterday = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)).isoformat().replace("+00:00", "Z")
+        yesterday = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         self.tracker.record_access("fact-1")
         self.tracker.record_access("fact-1")
         count = self.tracker.get_access_count("fact-1", since=yesterday)
@@ -165,6 +181,7 @@ class TestDecayScheduler(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _add_claim(
@@ -174,7 +191,11 @@ class TestDecayScheduler(unittest.TestCase):
         trust_state: TrustState = TrustState.UNVERIFIED,
         days_ago: int = 0,
     ) -> MemoryClaim:
-        ts = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days_ago)).isoformat().replace("+00:00", "Z")
+        ts = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days_ago))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         claim = _make_claim(
             claim_text=text,
             memory_type=memory_type,
@@ -205,8 +226,10 @@ class TestDecayScheduler(unittest.TestCase):
 
     def test_demote_validated_episodic(self):
         self._add_claim(
-            "demotable", memory_type="episodic",
-            trust_state=TrustState.VALIDATED, days_ago=180,
+            "demotable",
+            memory_type="episodic",
+            trust_state=TrustState.VALIDATED,
+            days_ago=180,
         )
         result = self.scheduler.run_cycle()
         self.assertEqual(result.demoted_count, 1)
@@ -226,8 +249,10 @@ class TestDecayScheduler(unittest.TestCase):
 
     def test_exempt_executable(self):
         self._add_claim(
-            "executable", memory_type="episodic",
-            trust_state=TrustState.EXECUTABLE, days_ago=180,
+            "executable",
+            memory_type="episodic",
+            trust_state=TrustState.EXECUTABLE,
+            days_ago=180,
         )
         result = self.scheduler.run_cycle()
         self.assertEqual(result.exempt_count, 1)
@@ -235,12 +260,16 @@ class TestDecayScheduler(unittest.TestCase):
 
     def test_unverified_decays_faster_than_validated(self):
         self._add_claim(
-            "uv", memory_type="episodic",
-            trust_state=TrustState.UNVERIFIED, days_ago=60,
+            "uv",
+            memory_type="episodic",
+            trust_state=TrustState.UNVERIFIED,
+            days_ago=60,
         )
         self._add_claim(
-            "val", memory_type="episodic",
-            trust_state=TrustState.VALIDATED, days_ago=60,
+            "val",
+            memory_type="episodic",
+            trust_state=TrustState.VALIDATED,
+            days_ago=60,
         )
         result = self.scheduler.run_cycle()
         self.assertGreaterEqual(result.deleted_count, 1)

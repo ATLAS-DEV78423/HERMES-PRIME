@@ -64,10 +64,9 @@ class MemoryStore:
         source_trust: str = "observed",
         causal_parent: str | None = None,
     ) -> MemoryStoreResult:
-        current_for_intent = len([
-            c for c in self.backend.list_all()
-            if c.intent_root == intent_root.intent_root
-        ])
+        current_for_intent = len(
+            [c for c in self.backend.list_all() if c.intent_root == intent_root.intent_root]
+        )
         total = self.backend.count()
         allowed, reason = self.depth_policy.check_claim_allowed(
             claim_text, current_for_intent, total
@@ -94,7 +93,9 @@ class MemoryStore:
 
         attestation = self.provenance_linker.attest_memory(claim, intent_root)
         self.backend.store(claim)
-        record = record_from_claim(claim, memory_type=MemoryType.EPISODIC, lineage=lineage, causal_parent=causal_parent)
+        record = record_from_claim(
+            claim, memory_type=MemoryType.EPISODIC, lineage=lineage, causal_parent=causal_parent
+        )
         return MemoryStoreResult(
             success=True,
             fact_id=claim.fact_id,
@@ -132,7 +133,9 @@ class MemoryStore:
         self.backend.store(claim)
         return MemoryStoreResult(success=True, fact_id=fact_id, claim=claim)
 
-    def promote(self, fact_id: str, target_state: TrustState = TrustState.VALIDATED) -> MemoryStoreResult:
+    def promote(
+        self, fact_id: str, target_state: TrustState = TrustState.VALIDATED
+    ) -> MemoryStoreResult:
         claim = self.backend.get(fact_id)
         if claim is None:
             return MemoryStoreResult(success=False, error=f"fact {fact_id} not found")
@@ -179,7 +182,10 @@ class MemoryStore:
     def gc(self, before_timestamp: str | None = None) -> MemoryStoreResult:
         if before_timestamp is None:
             import datetime as dt
-            cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=self.depth_policy.gc_retention_days)
+
+            cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(
+                days=self.depth_policy.gc_retention_days
+            )
             before_timestamp = cutoff.isoformat().replace("+00:00", "Z")
         deleted = self.backend.gc(before_timestamp)
         remaining = self.backend.count()

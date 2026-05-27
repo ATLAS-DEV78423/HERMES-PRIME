@@ -389,6 +389,7 @@ class ProvenanceAttestation:
 @dataclass
 class InferenceAttestation:
     """Attestation of an LLM inference call for auditability."""
+
     attestation_id: str
     model: str
     timestamp: str
@@ -689,6 +690,7 @@ class AgentSpawnAttestation:
 @dataclass
 class ExecutionOutcome:
     """Record of an autonomous execution outcome for learning loop."""
+
     execution_id: str
     task_prompt: str
     action_type: str
@@ -728,8 +730,11 @@ class ExecutionOutcome:
 @dataclass
 class LearnedPattern:
     """A pattern extracted by the learning loop from past outcomes."""
+
     pattern_id: str
-    pattern_type: str  # "prompt_instruction", "action_heuristic", "policy_suggestion", "task_pattern"
+    pattern_type: (
+        str  # "prompt_instruction", "action_heuristic", "policy_suggestion", "task_pattern"
+    )
     content: str
     confidence: float
     source_outcomes: list[str]

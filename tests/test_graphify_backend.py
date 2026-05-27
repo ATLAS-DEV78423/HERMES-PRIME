@@ -55,6 +55,7 @@ class TestGraphifyBackend(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_store_and_get(self):
@@ -108,10 +109,19 @@ class TestGraphifyBackend(unittest.TestCase):
     def test_gc(self):
         self.backend.store(_make_claim("keep"))
         import datetime as dt
+
         old_claim = _make_claim("delete me")
-        old_claim.timestamp = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10)).isoformat().replace("+00:00", "Z")
+        old_claim.timestamp = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         self.backend.store(old_claim)
-        cutoff = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)).isoformat().replace("+00:00", "Z")
+        cutoff = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         deleted = self.backend.gc(cutoff)
         self.assertEqual(deleted, 1)
 
@@ -132,6 +142,7 @@ class TestGraphifyBackend(unittest.TestCase):
 
     def test_import_edges_to_graph(self):
         from hermes_prime.memory.graph import KnowledgeGraph
+
         kg = KnowledgeGraph()
         count = self.backend.import_edges_to_graph(kg)
         self.assertEqual(count, 2)

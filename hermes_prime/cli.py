@@ -7,9 +7,7 @@ from pathlib import Path
 from typing import Any
 
 # Add upstream hermes-agent to sys.path so we can import AIAgent, HermesCLI, gateway, etc.
-_HERMES_AGENT_PATH = str(
-    Path(__file__).resolve().parent.parent / "external" / "hermes-agent"
-)
+_HERMES_AGENT_PATH = str(Path(__file__).resolve().parent.parent / "external" / "hermes-agent")
 if _HERMES_AGENT_PATH not in sys.path:
     sys.path.insert(0, _HERMES_AGENT_PATH)
 
@@ -38,10 +36,26 @@ from infrastructure.trust_store import TrustStore
 from infrastructure.vault.capabilities import CapabilityVault
 
 known_hp_commands = {
-    "graphify", "repair", "inspect", "mint", "evaluate", "patch", "replay",
-    "models", "run", "agents", "hp-dashboard", "tui", "learn", "brain",
-    "hp-doctor", "hp-memory", "chat", "gateway",
+    "graphify",
+    "repair",
+    "inspect",
+    "mint",
+    "evaluate",
+    "patch",
+    "replay",
+    "models",
+    "run",
+    "agents",
+    "hp-dashboard",
+    "tui",
+    "learn",
+    "brain",
+    "hp-doctor",
+    "hp-memory",
+    "chat",
+    "gateway",
 }
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Hermes Prime control plane")
@@ -49,12 +63,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--fabric-root", default=None, help="Local Fabric repository root")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     parser.add_argument("--prompt", default=None, help="User task prompt")
-    parser.add_argument("--model", default="mistral", help="LLM model to use (for --prompt with --autonomous)")
-    parser.add_argument("--autonomous", action="store_true", help="Use autonomous LLM-driven execution")
-    parser.add_argument("--memory-backend", default="sqlite", choices=["sqlite", "mempalace", "graphify"],
-                        help="Memory backend to use (default: sqlite)")
-    parser.add_argument("--memory-backend-config", default=None,
-                        help="Backend config path (palace dir for mempalace)")
+    parser.add_argument(
+        "--model", default="mistral", help="LLM model to use (for --prompt with --autonomous)"
+    )
+    parser.add_argument(
+        "--autonomous", action="store_true", help="Use autonomous LLM-driven execution"
+    )
+    parser.add_argument(
+        "--memory-backend",
+        default="sqlite",
+        choices=["sqlite", "mempalace", "graphify"],
+        help="Memory backend to use (default: sqlite)",
+    )
+    parser.add_argument(
+        "--memory-backend-config",
+        default=None,
+        help="Backend config path (palace dir for mempalace)",
+    )
 
     subparsers = parser.add_subparsers(dest="command")
 
@@ -72,7 +97,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     graphify_sub.add_parser("status", help="Check graphify availability and graph status")
 
-    g_import_parser = graphify_sub.add_parser("import", help="Import graphify graph into KnowledgeGraph")
+    g_import_parser = graphify_sub.add_parser(
+        "import", help="Import graphify graph into KnowledgeGraph"
+    )
     g_import_parser.add_argument("--graph-path", default=None, help="Path to graph.json")
 
     doctor_parser = subparsers.add_parser(
@@ -137,7 +164,9 @@ def build_parser() -> argparse.ArgumentParser:
     mem_write = memory_sub.add_parser("write", help="Write a fact to memory")
     mem_write.add_argument("--claim", required=True, help="The fact/belief text")
     mem_write.add_argument("--intent-root", required=True, help="Intent root URN")
-    mem_write.add_argument("--confidence", type=float, default=0.5, help="Epistemic confidence (0-1)")
+    mem_write.add_argument(
+        "--confidence", type=float, default=0.5, help="Epistemic confidence (0-1)"
+    )
     mem_write.add_argument("--source", default="cli", help="Source label")
     mem_write.add_argument("--source-trust", default="direct", help="Source trust level")
 
@@ -186,7 +215,9 @@ def build_parser() -> argparse.ArgumentParser:
     agents_spawn.add_argument("--scope", required=True, help="Capability scope")
     agents_spawn.add_argument("--parent", default=None, help="Parent agent ID")
     agents_spawn.add_argument("--risk-tier", default="T2", help="Risk tier ceiling")
-    agents_spawn.add_argument("--actions", nargs="*", default=["filesystem.read","memory.write"], help="Allowed actions")
+    agents_spawn.add_argument(
+        "--actions", nargs="*", default=["filesystem.read", "memory.write"], help="Allowed actions"
+    )
 
     agents_kill = agents_sub.add_parser("kill", help="Kill an agent and its descendants")
     agents_kill.add_argument("--agent-id", required=True, help="Agent URN to kill")
@@ -196,13 +227,19 @@ def build_parser() -> argparse.ArgumentParser:
     learn_sub = learn_parser.add_subparsers(dest="learn_command")
 
     learn_reflect = learn_sub.add_parser("reflect", help="Run learning loop reflection")
-    learn_reflect.add_argument("--min-outcomes", type=int, default=5, help="Minimum outcomes required for reflection")
+    learn_reflect.add_argument(
+        "--min-outcomes", type=int, default=5, help="Minimum outcomes required for reflection"
+    )
 
     learn_sub.add_parser("status", help="Show learning loop status")
 
     learn_patterns = learn_sub.add_parser("patterns", help="List learned patterns")
-    learn_patterns.add_argument("--type", dest="pattern_type", default=None, help="Filter by pattern type")
-    learn_patterns.add_argument("--min-confidence", type=float, default=0.0, help="Minimum confidence filter")
+    learn_patterns.add_argument(
+        "--type", dest="pattern_type", default=None, help="Filter by pattern type"
+    )
+    learn_patterns.add_argument(
+        "--min-confidence", type=float, default=0.0, help="Minimum confidence filter"
+    )
     learn_patterns.add_argument("--limit", type=int, default=20, help="Max patterns to show")
 
     learn_forget = learn_sub.add_parser("forget", help="Remove a learned pattern")
@@ -219,17 +256,23 @@ def build_parser() -> argparse.ArgumentParser:
     brain_write = brain_sub.add_parser("write", help="Write a note to the brain")
     brain_write.add_argument("--title", required=True, help="Note title")
     brain_write.add_argument("--content", required=True, help="Note content")
-    brain_write.add_argument("--type", dest="node_type", default="observation",
-                             choices=["topic", "problem", "solution", "observation",
-                                      "pattern", "decision", "concept"])
+    brain_write.add_argument(
+        "--type",
+        dest="node_type",
+        default="observation",
+        choices=["topic", "problem", "solution", "observation", "pattern", "decision", "concept"],
+    )
     brain_write.add_argument("--tags", default=None, help="Comma-separated tags")
     brain_write.add_argument("--link-to", default=None, help="Comma-separated node IDs to link to")
 
     brain_search = brain_sub.add_parser("search", help="Search brain nodes")
     brain_search.add_argument("--query", required=True, help="Search query")
-    brain_search.add_argument("--type", dest="node_type", default=None,
-                              choices=["topic", "problem", "solution", "observation",
-                                       "pattern", "decision", "concept"])
+    brain_search.add_argument(
+        "--type",
+        dest="node_type",
+        default=None,
+        choices=["topic", "problem", "solution", "observation", "pattern", "decision", "concept"],
+    )
     brain_search.add_argument("--limit", type=int, default=20)
 
     brain_problem = brain_sub.add_parser("problem", help="Track a problem and solution")
@@ -237,13 +280,17 @@ def build_parser() -> argparse.ArgumentParser:
     brain_problem.add_argument("--description", required=True, help="Problem description")
     brain_problem.add_argument("--context", default=None, help="Context")
     brain_problem.add_argument("--solution-title", default=None, help="Solution title (optional)")
-    brain_problem.add_argument("--solution-desc", default=None, help="Solution description (optional)")
+    brain_problem.add_argument(
+        "--solution-desc", default=None, help="Solution description (optional)"
+    )
 
     brain_sub.add_parser("status", help="Show brain health and metrics")
     brain_maintenance = brain_sub.add_parser("maintenance", help="Run brain maintenance")
     brain_maintenance.add_argument("--dry-run", action="store_true", help="Show what would be done")
     brain_maintenance.add_argument("--max-age", type=float, default=90.0, help="Max age in days")
-    brain_maintenance.add_argument("--min-confidence", type=float, default=0.2, help="Min confidence")
+    brain_maintenance.add_argument(
+        "--min-confidence", type=float, default=0.2, help="Min confidence"
+    )
 
     brain_export = brain_sub.add_parser("export", help="Export brain as Obsidian vault")
     brain_export.add_argument("--output", default="./brain-vault", help="Output directory")
@@ -255,10 +302,23 @@ def build_parser() -> argparse.ArgumentParser:
     brain_link = brain_sub.add_parser("link", help="Manually link two nodes")
     brain_link.add_argument("--source", required=True, help="Source node ID")
     brain_link.add_argument("--target", required=True, help="Target node ID")
-    brain_link.add_argument("--type", dest="edge_type", default="relates_to",
-                            choices=["solves", "causes", "relates_to", "prerequisite",
-                                     "contradicts", "extends", "references", "produces",
-                                     "blocks", "enables"])
+    brain_link.add_argument(
+        "--type",
+        dest="edge_type",
+        default="relates_to",
+        choices=[
+            "solves",
+            "causes",
+            "relates_to",
+            "prerequisite",
+            "contradicts",
+            "extends",
+            "references",
+            "produces",
+            "blocks",
+            "enables",
+        ],
+    )
 
     brain_sub.add_parser("unsolved", help="List unsolved problems")
 
@@ -323,12 +383,23 @@ def _humanize_decision(decision: dict[str, Any]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     from hermes_prime.recovery import install_signal_handlers
+
     install_signal_handlers()
     import importlib.util as _iu
+
     if _iu.find_spec("hermes_cli") is not None:
         import sys as _sys
-        print("! conflicting `hermes` CLI: both hermes-prime and hermes-agent are installed.", file=_sys.stderr, flush=True)
-        print("! Use `hermes-prime` instead of `hermes` to ensure this package runs.", file=_sys.stderr, flush=True)
+
+        print(
+            "! conflicting `hermes` CLI: both hermes-prime and hermes-agent are installed.",
+            file=_sys.stderr,
+            flush=True,
+        )
+        print(
+            "! Use `hermes-prime` instead of `hermes` to ensure this package runs.",
+            file=_sys.stderr,
+            flush=True,
+        )
 
     if argv is not None and "--prompt" not in argv and "--autonomous" not in argv:
         non_option_tokens = [token for token in argv if token and not token.startswith("-")]
@@ -338,7 +409,7 @@ def main(argv: list[str] | None = None) -> int:
     args, _ = parser.parse_known_args(argv)
     cmd = vars(args).get("command")
 
-    workspace = str(Path(args.workspace if hasattr(args, 'workspace') else '.').resolve())
+    workspace = str(Path(args.workspace if hasattr(args, "workspace") else ".").resolve())
     workspace_path = Path(workspace)
     fabric_root = args.fabric_root or str(workspace_path / "external" / "fabric")
     policy_root = str(workspace_path / "infrastructure" / "policy_engine")
@@ -360,26 +431,30 @@ def main(argv: list[str] | None = None) -> int:
             if _iu.find_spec("hermes_prime.orch.governance_hooks") is not None:
                 try:
                     from hermes_prime.orch.governance_hooks import GovernanceHooks
+
                     hooks = GovernanceHooks(sentinel, vault, trust_store, workspace)
                     if argv and isinstance(argv, list):
                         _first = argv[0]
                         if _first == "cron":
                             try:
                                 import cron.scheduler as _cs
+
                                 hooks.apply_cron_hook(_cs)
                             except ImportError:
                                 pass
                         elif _first == "tools":
                             try:
                                 import hermes_cli.tools_config as _tc
-                                if hasattr(_tc, 'toggle_tool'):
+
+                                if hasattr(_tc, "toggle_tool"):
                                     _tc.toggle_tool = hooks.wrap("tools", _tc.toggle_tool)
                             except ImportError:
                                 pass
                         elif _first == "skills":
                             try:
                                 import hermes_cli.skills_config as _sc
-                                if hasattr(_sc, 'install_skill'):
+
+                                if hasattr(_sc, "install_skill"):
                                     _sc.install_skill = hooks.wrap("skills", _sc.install_skill)
                             except ImportError:
                                 pass
@@ -389,13 +464,14 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 import hermes_cli.main as upstream_main
             except ImportError:
-                print("hermes: upstream hermes-agent not available. Check external/hermes-agent/ path.")
+                print(
+                    "hermes: upstream hermes-agent not available. Check external/hermes-agent/ path."
+                )
                 return 1
             return upstream_main.main()
 
     def handle_hp_command(args: argparse.Namespace) -> int:
         try:
-
             if args.command == "hp-doctor":
                 from hermes_prime.system_doctor import format_doctor_text, run_doctor
 
@@ -448,7 +524,9 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 trust_store.store_audit_trace(trace)
                 if args.json:
-                    _emit({"bundle": bundle, "backends": backends, "trace_id": trace.trace_id}, True)
+                    _emit(
+                        {"bundle": bundle, "backends": backends, "trace_id": trace.trace_id}, True
+                    )
                 else:
                     print(
                         f"Sentinel bundle: {bundle['bundle_root']} ({len(bundle['artifacts'])} artifacts)"
@@ -484,7 +562,14 @@ def main(argv: list[str] | None = None) -> int:
                     summary=f"Minted capability {token.capability} for {args.issued_to}.",
                 )
                 trust_store.store_audit_trace(trace)
-                _emit({"intent_root": intent.to_dict(), "token": token.to_dict(), "trace_id": trace.trace_id}, args.json)
+                _emit(
+                    {
+                        "intent_root": intent.to_dict(),
+                        "token": token.to_dict(),
+                        "trace_id": trace.trace_id,
+                    },
+                    args.json,
+                )
                 return 0
 
             if args.command == "evaluate":
@@ -621,7 +706,7 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     print(
                         f"{relative_path}: {'committed' if committed else 'staged'} "
-                        f"({ _humanize_decision(write_evaluation.decision.to_dict()) })"
+                        f"({_humanize_decision(write_evaluation.decision.to_dict())})"
                     )
                 return 0
 
@@ -642,7 +727,9 @@ def main(argv: list[str] | None = None) -> int:
                     action={"trace_id": args.trace_id, "limit": args.limit},
                     mutation={"result_count": len(payload) if isinstance(payload, list) else 1},
                     summary=(
-                        f"Replayed trace {args.trace_id}" if args.trace_id else f"Listed {args.limit} audit traces"
+                        f"Replayed trace {args.trace_id}"
+                        if args.trace_id
+                        else f"Listed {args.limit} audit traces"
                     ),
                 )
                 trust_store.store_audit_trace(replay_trace)
@@ -653,26 +740,34 @@ def main(argv: list[str] | None = None) -> int:
                         for trace in payload:
                             print(f"{trace['trace_type']} {trace['trace_id']}: {trace['summary']}")
                     else:
-                        print(f"{payload['trace_type']} {payload['trace_id']}: {payload['summary']}")
+                        print(
+                            f"{payload['trace_type']} {payload['trace_id']}: {payload['summary']}"
+                        )
                 return 0
 
             # Phase 2: Memory Fabric commands
             if args.command == "hp-memory":
                 if args.memory_backend == "mempalace":
-                    palace_path = args.memory_backend_config or str(workspace_path / ".hermes-prime" / "palace")
+                    palace_path = args.memory_backend_config or str(
+                        workspace_path / ".hermes-prime" / "palace"
+                    )
                     memory_store = MemoryStore(
                         backend=MemPalaceBackend(palace_path=palace_path),
                         depth_policy=DepthPolicy(),
                     )
                 elif args.memory_backend == "graphify":
                     from hermes_prime.memory.backends.graphify_backend import GraphifyBackend
+
                     memory_store = MemoryStore(
                         backend=GraphifyBackend(workspace_path=workspace),
                         depth_policy=DepthPolicy(),
                     )
                 else:
                     memory_store = MemoryStore(
-                        backend=SQLiteMemoryBackend(args.memory_backend_config or workspace_path / ".hermes-prime" / "memory.db"),
+                        backend=SQLiteMemoryBackend(
+                            args.memory_backend_config
+                            or workspace_path / ".hermes-prime" / "memory.db"
+                        ),
                         depth_policy=DepthPolicy(),
                     )
                 mem_cmd = args.memory_command
@@ -682,7 +777,11 @@ def main(argv: list[str] | None = None) -> int:
                         parser.error(f"unknown intent root: {args.intent_root}")
                     result = memory_store.write(
                         claim_text=args.claim,
-                        source={"source": args.source, "command": "memory.write", "workspace": workspace},
+                        source={
+                            "source": args.source,
+                            "command": "memory.write",
+                            "workspace": workspace,
+                        },
                         intent_root=intent,
                         epistemic_confidence=min(max(args.confidence, 0.0), 1.0),
                         source_trust=args.source_trust,
@@ -695,17 +794,27 @@ def main(argv: list[str] | None = None) -> int:
                         intent_root=args.intent_root,
                         action={"claim": args.claim, "confidence": args.confidence},
                         decision={"success": result.success},
-                        mutation={"fact_id": result.fact_id, "attestation": result.attestation.to_dict() if result.attestation else None},
+                        mutation={
+                            "fact_id": result.fact_id,
+                            "attestation": result.attestation.to_dict()
+                            if result.attestation
+                            else None,
+                        },
                         summary=f"Memory write: {args.claim[:60]}...",
                     )
                     trust_store.store_audit_trace(trace)
                     if args.json:
-                        _emit({
-                            "success": result.success,
-                            "fact_id": result.fact_id,
-                            "attestation": result.attestation.to_dict() if result.attestation else None,
-                            "trace_id": trace.trace_id,
-                        }, True)
+                        _emit(
+                            {
+                                "success": result.success,
+                                "fact_id": result.fact_id,
+                                "attestation": result.attestation.to_dict()
+                                if result.attestation
+                                else None,
+                                "trace_id": trace.trace_id,
+                            },
+                            True,
+                        )
                     else:
                         if result.success:
                             print(f"Memory written: {result.fact_id}")
@@ -726,17 +835,20 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     trust_store.store_audit_trace(trace)
                     if args.json:
-                        _emit({
-                            "query": args.query,
-                            "results": [r.__dict__ for r in result.results],
-                            "trace_id": trace.trace_id,
-                        }, True)
+                        _emit(
+                            {
+                                "query": args.query,
+                                "results": [r.__dict__ for r in result.results],
+                                "trace_id": trace.trace_id,
+                            },
+                            True,
+                        )
                     else:
                         if not result.results:
                             print("No matching memory claims found.")
                         else:
                             print(f"\nMemory Recall: {args.query}")
-                            print(f"{'='*60}")
+                            print(f"{'=' * 60}")
                             for r in result.results:
                                 print(f"  [{r.tier}] {r.fact_id}")
                                 print(f"  Claim: {r.claim[:120]}")
@@ -757,17 +869,24 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     trust_store.store_audit_trace(trace)
                     if args.json:
-                        _emit({
-                            "claims": [c.to_dict() for c in result.claims],
-                            "count": result.total_count,
-                            "trace_id": trace.trace_id,
-                        }, True)
+                        _emit(
+                            {
+                                "claims": [c.to_dict() for c in result.claims],
+                                "count": result.total_count,
+                                "trace_id": trace.trace_id,
+                            },
+                            True,
+                        )
                     else:
                         print(f"\nMemory Claims ({result.total_count} total)")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         for c in result.claims:
-                            tier = c.tier.value if hasattr(c.tier, 'value') else c.tier
-                            state = c.trust_state.value if hasattr(c.trust_state, 'value') else c.trust_state
+                            tier = c.tier.value if hasattr(c.tier, "value") else c.tier
+                            state = (
+                                c.trust_state.value
+                                if hasattr(c.trust_state, "value")
+                                else c.trust_state
+                            )
                             print(f"  [{tier}] [{state}] {c.fact_id}")
                             print(f"  {c.claim[:120]}")
                             print()
@@ -786,7 +905,14 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     trust_store.store_audit_trace(trace)
                     if args.json:
-                        _emit({"success": result.success, "fact_id": args.fact_id, "trace_id": trace.trace_id}, True)
+                        _emit(
+                            {
+                                "success": result.success,
+                                "fact_id": args.fact_id,
+                                "trace_id": trace.trace_id,
+                            },
+                            True,
+                        )
                     else:
                         if result.success:
                             print(f"Memory claim revoked: {args.fact_id}")
@@ -801,14 +927,26 @@ def main(argv: list[str] | None = None) -> int:
                         trace_type="memory_gc",
                         created_at=utc_now_iso(),
                         workspace_root=workspace,
-                        mutation={"deleted_count": result.deleted_count, "remaining": result.total_count},
+                        mutation={
+                            "deleted_count": result.deleted_count,
+                            "remaining": result.total_count,
+                        },
                         summary=f"Memory GC: {result.deleted_count} deleted, {result.total_count} remaining",
                     )
                     trust_store.store_audit_trace(trace)
                     if args.json:
-                        _emit({"deleted": result.deleted_count, "remaining": result.total_count, "trace_id": trace.trace_id}, True)
+                        _emit(
+                            {
+                                "deleted": result.deleted_count,
+                                "remaining": result.total_count,
+                                "trace_id": trace.trace_id,
+                            },
+                            True,
+                        )
                     else:
-                        print(f"Memory GC: {result.deleted_count} deleted, {result.total_count} remaining")
+                        print(
+                            f"Memory GC: {result.deleted_count} deleted, {result.total_count} remaining"
+                        )
                     return 0
                 else:
                     parser.error("unknown memory command")
@@ -846,7 +984,9 @@ def main(argv: list[str] | None = None) -> int:
                             print(f"No models available from {args.provider}")
                     return 0
                 except ImportError:
-                    print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
+                    print(
+                        "LLM libraries not installed. Install with: pip install hermes-prime[llm]"
+                    )
                     return 1
                 except Exception as e:
                     print(f"Error listing models: {e}")
@@ -856,6 +996,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.command == "hp-dashboard":
                 try:
                     from hermes_prime.tui.dashboard import HermesDashboard
+
                     dash = HermesDashboard(use_textual=True)
                     return dash.run()
                 except Exception as e:
@@ -865,7 +1006,8 @@ def main(argv: list[str] | None = None) -> int:
             if args.command == "tui":
                 from hermes_prime.tui.banner import HERMES_PRIME_LOGO
                 from hermes_prime.tui.components import (
-                    OperatorConsole, TelemetryHeader,
+                    OperatorConsole,
+                    TelemetryHeader,
                 )
                 from hermes_prime.tui.animations import boot_sequence
 
@@ -893,7 +1035,9 @@ def main(argv: list[str] | None = None) -> int:
             # Learning Loop commands
             if args.command == "learn":
                 outcome_store = OutcomeStore(workspace_path / ".hermes-prime" / "outcomes.db")
-                registry = LearningRegistry(workspace_path / ".hermes-prime" / "learned_patterns.json")
+                registry = LearningRegistry(
+                    workspace_path / ".hermes-prime" / "learned_patterns.json"
+                )
                 memory_store = MemoryStore(
                     backend=SQLiteMemoryBackend(workspace_path / ".hermes-prime" / "memory.db"),
                     depth_policy=DepthPolicy(),
@@ -910,7 +1054,9 @@ def main(argv: list[str] | None = None) -> int:
                         _emit(result, True)
                     else:
                         if result.get("reflected"):
-                            print(f"Reflection complete: {result['patterns_created']} patterns created")
+                            print(
+                                f"Reflection complete: {result['patterns_created']} patterns created"
+                            )
                             print(f"Reviewed {result['total_outcomes_reviewed']} outcomes")
                             m = result.get("metrics", {})
                             print(f"Approval rate: {m.get('approval_rate', 0):.1%}")
@@ -927,13 +1073,15 @@ def main(argv: list[str] | None = None) -> int:
                         outcomes = status.get("outcomes", {})
                         patterns = status.get("learned_patterns", {})
                         print("\nLearning Loop Status")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         print(f"Total executions tracked: {outcomes.get('total', 0)}")
                         print(f"Approval rate: {outcomes.get('approval_rate', 0):.1%}")
                         print(f"Parse rate: {outcomes.get('parse_rate', 0):.1%}")
                         print(f"Learned patterns: {patterns.get('total_patterns', 0)}")
                         print(f"By type: {patterns.get('by_type', {})}")
-                        print(f"Ready to learn: {'yes' if status.get('ready_to_learn') else 'no (need 5+ outcomes)'}")
+                        print(
+                            f"Ready to learn: {'yes' if status.get('ready_to_learn') else 'no (need 5+ outcomes)'}"
+                        )
                     return 0
 
                 elif args.learn_command == "patterns":
@@ -943,17 +1091,24 @@ def main(argv: list[str] | None = None) -> int:
                         limit=args.limit,
                     )
                     if args.json:
-                        _emit({"patterns": [p.to_dict() for p in patterns], "count": len(patterns)}, True)
+                        _emit(
+                            {"patterns": [p.to_dict() for p in patterns], "count": len(patterns)},
+                            True,
+                        )
                     else:
                         if not patterns:
                             print("No learned patterns found.")
                         else:
                             print(f"\nLearned Patterns ({len(patterns)})")
-                            print(f"{'='*60}")
+                            print(f"{'=' * 60}")
                             for p in patterns:
-                                print(f"  [{p.pattern_type}] {p.pattern_id[:16]}... (confidence: {p.confidence:.2f})")
+                                print(
+                                    f"  [{p.pattern_type}] {p.pattern_id[:16]}... (confidence: {p.confidence:.2f})"
+                                )
                                 print(f"  {p.content[:120]}")
-                                print(f"  Applied: {p.application_count}x | Success: {p.success_rate:.0%}")
+                                print(
+                                    f"  Applied: {p.application_count}x | Success: {p.success_rate:.0%}"
+                                )
                                 if p.tags:
                                     print(f"  Tags: {', '.join(p.tags)}")
                                 print()
@@ -977,7 +1132,7 @@ def main(argv: list[str] | None = None) -> int:
                         _emit({"metrics": metrics, "recent": [o.to_dict() for o in recent]}, True)
                     else:
                         print("\nExecution Outcomes")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         print(f"Total: {metrics.get('total', 0)}")
                         print(f"Approved: {metrics.get('approved', 0)}")
                         print(f"Rejected by Sentinel: {metrics.get('rejected_by_sentinel', 0)}")
@@ -1001,10 +1156,12 @@ def main(argv: list[str] | None = None) -> int:
                         _emit(payload, True)
                     else:
                         print("\nLearning Metrics")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         print(f"Outcomes tracked: {outcome_metrics.get('total', 0)}")
                         print(f"Patterns learned: {registry_metrics.get('total_patterns', 0)}")
-                        print(f"Avg pattern confidence: {registry_metrics.get('avg_confidence', 0):.3f}")
+                        print(
+                            f"Avg pattern confidence: {registry_metrics.get('avg_confidence', 0):.3f}"
+                        )
                     return 0
 
                 else:
@@ -1013,7 +1170,14 @@ def main(argv: list[str] | None = None) -> int:
 
             # Brain / Neural Network commands
             if args.command == "brain":
-                from hermes_prime.brain import NeuralGraph, BrainJournal, AutoLinker, BrainMaintenanceAgent, NodeType, EdgeType
+                from hermes_prime.brain import (
+                    NeuralGraph,
+                    BrainJournal,
+                    AutoLinker,
+                    BrainMaintenanceAgent,
+                    NodeType,
+                    EdgeType,
+                )
 
                 brain_db = workspace_path / ".hermes-prime" / "brain.db"
                 graph = NeuralGraph(brain_db)
@@ -1024,9 +1188,12 @@ def main(argv: list[str] | None = None) -> int:
                 if args.brain_command == "write":
                     tags = [t.strip() for t in args.tags.split(",")] if args.tags else []
                     type_map = {
-                        "topic": NodeType.TOPIC, "problem": NodeType.PROBLEM,
-                        "solution": NodeType.SOLUTION, "observation": NodeType.OBSERVATION,
-                        "pattern": NodeType.PATTERN, "decision": NodeType.DECISION,
+                        "topic": NodeType.TOPIC,
+                        "problem": NodeType.PROBLEM,
+                        "solution": NodeType.SOLUTION,
+                        "observation": NodeType.OBSERVATION,
+                        "pattern": NodeType.PATTERN,
+                        "decision": NodeType.DECISION,
                         "concept": NodeType.CONCEPT,
                     }
                     ntype = type_map.get(args.node_type, NodeType.OBSERVATION)
@@ -1036,7 +1203,14 @@ def main(argv: list[str] | None = None) -> int:
                         graph.add_edge(node.node_id, lid, EdgeType.RELATES_TO)
                     created = linker.link_new_node(node.node_id)
                     if args.json:
-                        _emit({"node_id": node.node_id, "links_created": created, "node": node.to_dict()}, True)
+                        _emit(
+                            {
+                                "node_id": node.node_id,
+                                "links_created": created,
+                                "node": node.to_dict(),
+                            },
+                            True,
+                        )
                     else:
                         print(f"Brain node written: {node.node_id[:16]}...")
                         print(f"  Title: {node.title}")
@@ -1049,28 +1223,36 @@ def main(argv: list[str] | None = None) -> int:
                     ntypes = [ntype_enum] if ntype_enum else None
                     results = graph.search_nodes(args.query, node_types=ntypes, limit=args.limit)
                     if args.json:
-                        _emit({"query": args.query, "results": [r.to_dict() for r in results]}, True)
+                        _emit(
+                            {"query": args.query, "results": [r.to_dict() for r in results]}, True
+                        )
                     else:
                         if not results:
                             print(f"No brain nodes matching '{args.query}'")
                         else:
                             print(f"\nBrain Search: '{args.query}' ({len(results)} results)")
-                            print(f"{'='*60}")
+                            print(f"{'=' * 60}")
                             for r in results:
                                 edges = graph.get_node_edges(r.node_id)
                                 print(f"  [{r.node_type.value}] {r.title}")
-                                print(f"    ID: {r.node_id[:16]}... | Confidence: {r.confidence:.2f} | Links: {len(edges)}")
+                                print(
+                                    f"    ID: {r.node_id[:16]}... | Confidence: {r.confidence:.2f} | Links: {len(edges)}"
+                                )
                                 print(f"    {r.content[:100]}")
                                 print()
                     return 0
 
                 elif args.brain_command == "problem":
-                    problem = journal.write_problem(args.title, args.description, context=args.context)
+                    problem = journal.write_problem(
+                        args.title, args.description, context=args.context
+                    )
                     linker.link_new_node(problem.node_id)
                     print(f"Problem recorded: {problem.node_id[:16]}...")
                     if args.solution_title and args.solution_desc:
                         solution = journal.write_solution(
-                            args.solution_title, args.solution_desc, problem.node_id,
+                            args.solution_title,
+                            args.solution_desc,
+                            problem.node_id,
                         )
                         linker.link_problem_to_solution(problem.node_id, solution.node_id)
                         print(f"Solution recorded: {solution.node_id[:16]}...")
@@ -1083,7 +1265,7 @@ def main(argv: list[str] | None = None) -> int:
                         _emit({"health": health, "metrics": metrics}, True)
                     else:
                         print("\nBrain Health")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         print(f"Total nodes: {health['total_nodes']}")
                         print(f"Total connections: {health['total_edges']}")
                         print(f"Health score: {health['health_score']:.3f}")
@@ -1107,7 +1289,7 @@ def main(argv: list[str] | None = None) -> int:
                         _emit(report, True)
                     else:
                         print("\nBrain Maintenance")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         print(f"Pruned nodes: {report['pruned_nodes']}")
                         print(f"Merged duplicates: {report['merged_nodes']}")
                         print(f"Consolidated orphans: {report['consolidated_orphans']}")
@@ -1145,14 +1327,18 @@ def main(argv: list[str] | None = None) -> int:
 
                 elif args.brain_command == "link":
                     edge = graph.add_edge(
-                        args.source, args.target,
-                        EdgeType(args.edge_type), weight=1.0,
+                        args.source,
+                        args.target,
+                        EdgeType(args.edge_type),
+                        weight=1.0,
                     )
                     if args.json:
                         _emit({"edge_id": edge.edge_id if edge else None}, True)
                     else:
                         if edge:
-                            print(f"Linked: {args.source[:16]}... → {args.target[:16]}... ({args.edge_type})")
+                            print(
+                                f"Linked: {args.source[:16]}... → {args.target[:16]}... ({args.edge_type})"
+                            )
                         else:
                             print("Failed to create link (may already exist).")
                     return 0
@@ -1166,7 +1352,7 @@ def main(argv: list[str] | None = None) -> int:
                             print("No unsolved problems!")
                         else:
                             print(f"\nUnsolved Problems ({len(unsolved)})")
-                            print(f"{'='*60}")
+                            print(f"{'=' * 60}")
                             for p in unsolved:
                                 sol_count = len(journal.get_solutions_for_problem(p.node_id))
                                 print(f"  {p.title}")
@@ -1195,7 +1381,7 @@ def main(argv: list[str] | None = None) -> int:
                         _emit({"agents": agents, "count": len(agents)}, True)
                     else:
                         print(f"\nAgents ({len(agents)} total)")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         for a in agents:
                             depth_mark = "(root)" if a["depth"] == 0 else f"depth={a['depth']}"
                             print(f"  [{a['status']}] {a['agent_id'][:16]}... {depth_mark}")
@@ -1234,7 +1420,13 @@ def main(argv: list[str] | None = None) -> int:
                         dispatcher.kill(args.agent_id)
                         agent_info = dispatcher.get_status(args.agent_id)
                         if args.json:
-                            _emit({"killed": args.agent_id, "status": agent_info["status"] if agent_info else "unknown"}, True)
+                            _emit(
+                                {
+                                    "killed": args.agent_id,
+                                    "status": agent_info["status"] if agent_info else "unknown",
+                                },
+                                True,
+                            )
                         else:
                             print(f"Agent {args.agent_id} killed.")
                     except Exception as e:
@@ -1278,16 +1470,18 @@ def main(argv: list[str] | None = None) -> int:
                         "task": result.task_prompt,
                         "proposal": result.proposal.to_dict() if result.proposal else None,
                         "decision": result.sentinel_decision,
-                        "inference": result.inference_attestation.to_dict() if result.inference_attestation else None,
+                        "inference": result.inference_attestation.to_dict()
+                        if result.inference_attestation
+                        else None,
                         "summary": result.summary,
                     }
 
                     if args.json:
                         _emit(payload, True)
                     else:
-                        print(f"\n{'='*60}")
+                        print(f"\n{'=' * 60}")
                         print(f"Autonomous Execution: {result.task_prompt}")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         if result.proposal:
                             print(f"Proposed Action: {result.proposal.action_type.value}")
                             print(f"Scope: {result.proposal.scope}")
@@ -1296,14 +1490,18 @@ def main(argv: list[str] | None = None) -> int:
                         if result.error_message:
                             print(f"Error: {result.error_message}")
                         if result.inference_attestation:
-                            print(f"Inference Latency: {result.inference_attestation.latency_ms:.0f}ms")
+                            print(
+                                f"Inference Latency: {result.inference_attestation.latency_ms:.0f}ms"
+                            )
                             print(f"Tokens Used: {result.inference_attestation.tokens_used}")
                         print(f"Trace ID: {result.trace_id}")
-                        print(f"{'='*60}\n")
+                        print(f"{'=' * 60}\n")
 
                     return 0 if result.execution_status == "success" else 1
                 except ImportError:
-                    print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
+                    print(
+                        "LLM libraries not installed. Install with: pip install hermes-prime[llm]"
+                    )
                     return 1
                 except Exception as e:
                     print(f"Error executing autonomous task: {e}")
@@ -1314,6 +1512,7 @@ def main(argv: list[str] | None = None) -> int:
             # Phase 8: Graphify commands
             if args.command == "graphify":
                 from hermes_prime.memory.graphify_bridge import GraphifyBridge
+
                 bridge = GraphifyBridge(workspace_path=workspace)
 
                 if args.graphify_command == "status":
@@ -1322,9 +1521,19 @@ def main(argv: list[str] | None = None) -> int:
                         nodes = len(bridge.get_nodes()) if loaded else 0
                         edges = len(bridge.get_edges()) if loaded else 0
                         if args.json:
-                            _emit({"available": True, "graph_loaded": loaded, "nodes": nodes, "edges": edges}, True)
+                            _emit(
+                                {
+                                    "available": True,
+                                    "graph_loaded": loaded,
+                                    "nodes": nodes,
+                                    "edges": edges,
+                                },
+                                True,
+                            )
                         else:
-                            print(f"graphify: available, graph loaded={loaded} ({nodes} nodes, {edges} edges)")
+                            print(
+                                f"graphify: available, graph loaded={loaded} ({nodes} nodes, {edges} edges)"
+                            )
                     else:
                         if args.json:
                             _emit({"available": False}, True)
@@ -1340,7 +1549,9 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"Building graphify knowledge graph for {target}...")
                     try:
                         result = bridge.extract(target_path=target)
-                        print(f"Graph built: {len(result.get('nodes', []))} nodes, {len(result.get('edges', []))} edges")
+                        print(
+                            f"Graph built: {len(result.get('nodes', []))} nodes, {len(result.get('edges', []))} edges"
+                        )
                         return 0
                     except Exception as e:
                         print(f"Error building graph: {e}")
@@ -1358,7 +1569,7 @@ def main(argv: list[str] | None = None) -> int:
                         _emit({"query": args.query, "nodes": nodes, "edges": edges}, True)
                     else:
                         print(f"\nGraphify Query: {args.query}")
-                        print(f"{'='*60}")
+                        print(f"{'=' * 60}")
                         print(f"Subgraph: {len(nodes)} nodes, {len(edges)} edges")
                         for n in nodes[:20]:
                             label = n.get("label", n.get("name", n.get("id", "?")))
@@ -1369,6 +1580,7 @@ def main(argv: list[str] | None = None) -> int:
 
                 elif args.graphify_command == "import":
                     from hermes_prime.memory.graph import KnowledgeGraph
+
                     loaded = bridge.load_existing_graph(graph_path=args.graph_path)
                     if not loaded:
                         print("No graph to import. Build or specify --graph-path.")
@@ -1431,16 +1643,21 @@ def main(argv: list[str] | None = None) -> int:
                     )
 
                     if args.json:
-                        _emit({
-                            "execution_id": result.execution_id,
-                            "status": result.execution_status,
-                            "trace_id": result.trace_id,
-                        }, True)
+                        _emit(
+                            {
+                                "execution_id": result.execution_id,
+                                "status": result.execution_status,
+                                "trace_id": result.trace_id,
+                            },
+                            True,
+                        )
                     else:
                         print(f"Autonomous: {result.summary}")
                     return 0
                 except ImportError:
-                    print("LLM libraries not installed. Install with: pip install hermes-prime[llm]")
+                    print(
+                        "LLM libraries not installed. Install with: pip install hermes-prime[llm]"
+                    )
                     return 1
                 except Exception as e:
                     print(f"Error: {e}")
@@ -1484,5 +1701,5 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     from hermes_prime.recovery import safe_main
-    raise SystemExit(safe_main(lambda: main()))
 
+    raise SystemExit(safe_main(lambda: main()))

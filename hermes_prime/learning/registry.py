@@ -175,7 +175,9 @@ class LearningRegistry:
         results.sort(key=lambda p: p.confidence, reverse=True)
         return results[:limit]
 
-    def get_active_instructions(self, action_types: list[str] | None = None) -> list[LearnedPattern]:
+    def get_active_instructions(
+        self, action_types: list[str] | None = None
+    ) -> list[LearnedPattern]:
         results = self.list_patterns(
             pattern_type="prompt_instruction",
             min_confidence=0.6,
@@ -196,10 +198,13 @@ class LearningRegistry:
         if pattern is None:
             return
         from hermes_prime.utils import utc_now_iso
+
         pattern.last_applied_at = utc_now_iso()
         pattern.application_count += 1
         old_total = pattern.application_count - 1
-        pattern.success_rate = ((pattern.success_rate * old_total) + (1.0 if success else 0.0)) / pattern.application_count
+        pattern.success_rate = (
+            (pattern.success_rate * old_total) + (1.0 if success else 0.0)
+        ) / pattern.application_count
         self._upsert(pattern)
 
     def remove(self, pattern_id: str) -> bool:
@@ -240,5 +245,7 @@ class LearningRegistry:
             "by_type": types,
             "avg_confidence": round(
                 sum(p.confidence for p in self._patterns.values()) / self.count(), 3
-            ) if self._patterns else 0.0,
+            )
+            if self._patterns
+            else 0.0,
         }

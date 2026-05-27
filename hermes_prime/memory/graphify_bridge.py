@@ -19,7 +19,9 @@ class GraphifyBridge:
     """
 
     def __init__(self, workspace_path: str | Path | None = None) -> None:
-        self.workspace_path = Path(workspace_path).resolve() if workspace_path else Path.cwd().resolve()
+        self.workspace_path = (
+            Path(workspace_path).resolve() if workspace_path else Path.cwd().resolve()
+        )
         self.graph_out_dir = self.workspace_path / "graphify-out"
         self.graph_path = self.graph_out_dir / "graph.json"
         self._graph: Any | None = None
@@ -74,7 +76,11 @@ class GraphifyBridge:
         """Get all edges from the loaded graph."""
         if not self._graph:
             return []
-        edges = self._graph.get("edges") or self._graph.get("links") or self._graph.get("elements", {}).get("edges", [])
+        edges = (
+            self._graph.get("edges")
+            or self._graph.get("links")
+            or self._graph.get("elements", {}).get("edges", [])
+        )
         return edges
 
     def search_nodes(self, query: str, limit: int = 20) -> list[dict[str, Any]]:

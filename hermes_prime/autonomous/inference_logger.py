@@ -10,6 +10,7 @@ from hermes_prime.utils import hash_struct, new_urn_uuid, utc_now_iso
 @dataclass
 class InferenceAttestation:
     """Attestation of an LLM inference call."""
+
     attestation_id: str
     model: str
     timestamp: str

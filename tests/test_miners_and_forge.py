@@ -35,7 +35,10 @@ class MinerAndForgeTests(unittest.TestCase):
         miner = AstMiner(self.root)
         symbols = miner.extract_symbols().to_dict()
         imports = miner.trace_imports().to_dict()
-        self.assertTrue(symbols["parser_backend"].startswith("tree-sitter:") or symbols["parser_backend"] == "python_ast_fallback")
+        self.assertTrue(
+            symbols["parser_backend"].startswith("tree-sitter:")
+            or symbols["parser_backend"] == "python_ast_fallback"
+        )
         self.assertTrue(any(item["symbol"] == "Auth" for item in symbols["results"]))
         self.assertTrue(any(item["import"] == "os" for item in imports["results"]))
 
@@ -69,7 +72,9 @@ class MinerAndForgeTests(unittest.TestCase):
         self.assertIn("+print('patched')", diff)
         committed = session.commit()
         self.assertIn("src/auth.py", committed)
-        self.assertIn("print('patched')", (self.root / "src" / "auth.py").read_text(encoding="utf-8"))
+        self.assertIn(
+            "print('patched')", (self.root / "src" / "auth.py").read_text(encoding="utf-8")
+        )
         session.write_text("src/auth.py", "second change\n")
         session.rollback()
         self.assertEqual(session.list_changes(), [])

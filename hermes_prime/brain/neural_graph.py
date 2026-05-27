@@ -93,6 +93,7 @@ class BrainNode:
     def age_days(self) -> float:
         from hermes_prime.utils import parse_iso8601
         import datetime as dt
+
         created = parse_iso8601(self.created_at)
         return (dt.datetime.now(dt.timezone.utc) - created).total_seconds() / 86400.0
 
@@ -192,6 +193,7 @@ class NeuralGraph:
             metadata=metadata or {},
         )
         import json
+
         self._conn.execute(
             """INSERT OR REPLACE INTO brain_nodes
                (node_id, node_type, title, content, tags, confidence, access_count,
@@ -234,6 +236,7 @@ class NeuralGraph:
         updates: list[str] = []
         params: list[Any] = []
         import json
+
         for key, value in kwargs.items():
             if key in allowed:
                 if key == "tags":
@@ -257,7 +260,9 @@ class NeuralGraph:
         return cursor.rowcount > 0
 
     def delete_node(self, node_id: str) -> bool:
-        self._conn.execute("DELETE FROM brain_edges WHERE source_id = ? OR target_id = ?", (node_id, node_id))
+        self._conn.execute(
+            "DELETE FROM brain_edges WHERE source_id = ? OR target_id = ?", (node_id, node_id)
+        )
         cursor = self._conn.execute("DELETE FROM brain_nodes WHERE node_id = ?", (node_id,))
         self._conn.commit()
         return cursor.rowcount > 0
@@ -282,6 +287,7 @@ class NeuralGraph:
             metadata=metadata or {},
         )
         import json
+
         try:
             self._conn.execute(
                 """INSERT OR REPLACE INTO brain_edges
@@ -310,7 +316,9 @@ class NeuralGraph:
         return [self._row_to_edge(r) for r in rows]
 
     def get_neighbors(
-        self, node_id: str, edge_types: list[EdgeType] | None = None,
+        self,
+        node_id: str,
+        edge_types: list[EdgeType] | None = None,
     ) -> list[tuple[BrainNode, BrainEdge]]:
         edges = self.get_node_edges(node_id)
         results: list[tuple[BrainNode, BrainEdge]] = []
@@ -369,6 +377,7 @@ class NeuralGraph:
 
     def search_by_tags(self, tags: list[str], limit: int = 20) -> list[BrainNode]:
         import json
+
         results: list[BrainNode] = []
         rows = self._conn.execute(
             "SELECT * FROM brain_nodes ORDER BY confidence DESC, access_count DESC LIMIT ?",
@@ -390,9 +399,7 @@ class NeuralGraph:
         return [self._row_to_node(r) for r in rows]
 
     def get_all_nodes(self) -> list[BrainNode]:
-        rows = self._conn.execute(
-            "SELECT * FROM brain_nodes ORDER BY created_at DESC"
-        ).fetchall()
+        rows = self._conn.execute("SELECT * FROM brain_nodes ORDER BY created_at DESC").fetchall()
         return [self._row_to_node(r) for r in rows]
 
     def get_all_edges(self) -> list[BrainEdge]:
@@ -407,10 +414,14 @@ class NeuralGraph:
 
     def get_metrics(self) -> dict[str, Any]:
         by_type: Counter = Counter()
-        for row in self._conn.execute("SELECT node_type, COUNT(*) as cnt FROM brain_nodes GROUP BY node_type"):
+        for row in self._conn.execute(
+            "SELECT node_type, COUNT(*) as cnt FROM brain_nodes GROUP BY node_type"
+        ):
             by_type[row["node_type"]] = row["cnt"]
         by_edge: Counter = Counter()
-        for row in self._conn.execute("SELECT edge_type, COUNT(*) as cnt FROM brain_edges GROUP BY edge_type"):
+        for row in self._conn.execute(
+            "SELECT edge_type, COUNT(*) as cnt FROM brain_edges GROUP BY edge_type"
+        ):
             by_edge[row["edge_type"]] = row["cnt"]
         total_nodes = self.count_nodes()
         return {
@@ -419,8 +430,11 @@ class NeuralGraph:
             "by_node_type": dict(by_type),
             "by_edge_type": dict(by_edge),
             "avg_confidence": round(
-                self._conn.execute("SELECT AVG(confidence) FROM brain_nodes").fetchone()[0] or 0.0, 3
-            ) if total_nodes else 0.0,
+                self._conn.execute("SELECT AVG(confidence) FROM brain_nodes").fetchone()[0] or 0.0,
+                3,
+            )
+            if total_nodes
+            else 0.0,
         }
 
     def clear(self) -> None:
@@ -433,6 +447,7 @@ class NeuralGraph:
 
     def _row_to_node(self, row: sqlite3.Row) -> BrainNode:
         import json
+
         return BrainNode(
             node_id=row["node_id"],
             node_type=NodeType(row["node_type"]),
@@ -450,6 +465,7 @@ class NeuralGraph:
 
     def _row_to_edge(self, row: sqlite3.Row) -> BrainEdge:
         import json
+
         return BrainEdge(
             edge_id=row["edge_id"],
             source_id=row["source_id"],

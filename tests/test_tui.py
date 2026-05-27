@@ -175,11 +175,13 @@ class ComponentsTests(unittest.TestCase):
 class HermesConsoleTests(unittest.TestCase):
     def setUp(self) -> None:
         from hermes_prime.tui.console import HermesConsole
+
         self.console = HermesConsole(use_rich=False)
 
     def test_print_logo(self) -> None:
         import io
         import sys
+
         captured = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = captured
@@ -193,6 +195,7 @@ class HermesConsoleTests(unittest.TestCase):
     def test_print_status(self) -> None:
         import io
         import sys
+
         captured = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = captured
@@ -207,6 +210,7 @@ class HermesConsoleTests(unittest.TestCase):
     def test_print_error(self) -> None:
         import io
         import sys
+
         captured = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = captured
@@ -221,6 +225,7 @@ class HermesConsoleTests(unittest.TestCase):
     def test_print_success(self) -> None:
         import io
         import sys
+
         captured = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = captured
@@ -236,11 +241,13 @@ class AnimationsTests(unittest.TestCase):
     def test_pulse_loader_output(self) -> None:
         import io
         import sys
+
         captured = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = captured
         try:
             from hermes_prime.tui.animations import pulse_loader
+
             pulse_loader(label="TEST", steps=2, delay=0.01)
             output = captured.getvalue()
             self.assertTrue(len(output) > 0)
@@ -250,11 +257,13 @@ class AnimationsTests(unittest.TestCase):
     def test_typewriter_output(self) -> None:
         import io
         import sys
+
         captured = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = captured
         try:
             from hermes_prime.tui.animations import typewriter
+
             typewriter("hello", delay=0.001)
             output = captured.getvalue()
             self.assertIn("hello", output)

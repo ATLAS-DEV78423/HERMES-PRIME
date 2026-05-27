@@ -31,7 +31,4 @@ class HMACSigner:
         return self.sign(canonical_json(normalize_for_json(data)).encode("utf-8"))
 
     def verify_json(self, data: Any, signature: str) -> bool:
-        return self.verify(
-            canonical_json(normalize_for_json(data)).encode("utf-8"), signature
-        )
-
+        return self.verify(canonical_json(normalize_for_json(data)).encode("utf-8"), signature)

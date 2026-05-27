@@ -50,9 +50,9 @@ class ForgeJournal:
             "payload": payload,
             "previous_hash": self.head_hash,
         }
-        entry_hash = "sha256:" + hashlib.sha256(
-            canonical_json(entry_payload).encode("utf-8")
-        ).hexdigest()
+        entry_hash = (
+            "sha256:" + hashlib.sha256(canonical_json(entry_payload).encode("utf-8")).hexdigest()
+        )
         entry = JournalEntry(
             index=len(self.entries),
             timestamp=timestamp,
@@ -126,7 +126,11 @@ class ForgeSession:
             )
         )
         if not decision.permitted:
-            layer = f"layer_{decision.blocking_layer}" if decision.blocking_layer is not None else "layer_unknown"
+            layer = (
+                f"layer_{decision.blocking_layer}"
+                if decision.blocking_layer is not None
+                else "layer_unknown"
+            )
             reason = decision.denial_reason or "sentinel_denied"
             raise PermissionError(f"sentinel_denied:{layer}:{reason}")
         return decision

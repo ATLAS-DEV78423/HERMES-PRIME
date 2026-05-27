@@ -39,11 +39,15 @@ class AstMiner:
         self.backend_registry = BackendRegistry(self.workspace_root)
         self._tree_sitter_backend = self._load_tree_sitter_backend()
         if self._tree_sitter_backend is not None:
-            self.parser_backend = f"tree-sitter:{','.join(sorted(self._tree_sitter_backend['languages']))}"
+            self.parser_backend = (
+                f"tree-sitter:{','.join(sorted(self._tree_sitter_backend['languages']))}"
+            )
         else:
             self.parser_backend = "python_ast_fallback"
 
-    def extract_symbols(self, scope: str | None = None, budget: AstMinerBudget | None = None) -> MinerAttestation:
+    def extract_symbols(
+        self, scope: str | None = None, budget: AstMinerBudget | None = None
+    ) -> MinerAttestation:
         budget = budget or AstMinerBudget()
         start = time.monotonic()
         root = Path(scope).resolve() if scope else self.workspace_root
@@ -60,7 +64,9 @@ class AstMiner:
                 break
         return self._attest("extract_symbols", root, examined, results, start)
 
-    def trace_imports(self, scope: str | None = None, budget: AstMinerBudget | None = None) -> MinerAttestation:
+    def trace_imports(
+        self, scope: str | None = None, budget: AstMinerBudget | None = None
+    ) -> MinerAttestation:
         budget = budget or AstMinerBudget()
         start = time.monotonic()
         root = Path(scope).resolve() if scope else self.workspace_root
@@ -191,7 +197,10 @@ class AstMiner:
             (re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)", re.M), "class"),
             (re.compile(r"^\s*export\s+function\s+([A-Za-z_][A-Za-z0-9_]*)", re.M), "function"),
             (re.compile(r"^\s*function\s+([A-Za-z_][A-Za-z0-9_]*)", re.M), "function"),
-            (re.compile(r"^\s*export\s+(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)", re.M), "variable"),
+            (
+                re.compile(r"^\s*export\s+(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)", re.M),
+                "variable",
+            ),
         ]
         for regex, kind in patterns:
             for match in regex.finditer(text):
@@ -308,10 +317,16 @@ class AstMiner:
         for child in getattr(node, "children", []) or []:
             yield from self._iter_tree_nodes(child)
 
-    def _tree_sitter_python_symbols(self, path: Path, source: str, root: Any) -> list[dict[str, Any]]:
+    def _tree_sitter_python_symbols(
+        self, path: Path, source: str, root: Any
+    ) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
         for node in self._iter_tree_nodes(root):
-            if node.type not in {"function_definition", "async_function_definition", "class_definition"}:
+            if node.type not in {
+                "function_definition",
+                "async_function_definition",
+                "class_definition",
+            }:
                 continue
             name_node = node.child_by_field_name("name")
             if name_node is None:
@@ -331,7 +346,9 @@ class AstMiner:
             )
         return results
 
-    def _tree_sitter_python_imports(self, path: Path, source: str, root: Any) -> list[dict[str, Any]]:
+    def _tree_sitter_python_imports(
+        self, path: Path, source: str, root: Any
+    ) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
         for node in self._iter_tree_nodes(root):
             if node.type == "import_statement":
@@ -379,13 +396,27 @@ class AstMiner:
         for node in self._iter_tree_nodes(root):
             if node.type == "export_statement":
                 for child in getattr(node, "named_children", []) or []:
-                    if child.type in {"class_declaration", "function_declaration", "lexical_declaration", "method_definition"}:
-                        results.extend(self._js_symbol_from_node(path, source, child, exported=True))
-            elif node.type in {"class_declaration", "function_declaration", "lexical_declaration", "method_definition"}:
+                    if child.type in {
+                        "class_declaration",
+                        "function_declaration",
+                        "lexical_declaration",
+                        "method_definition",
+                    }:
+                        results.extend(
+                            self._js_symbol_from_node(path, source, child, exported=True)
+                        )
+            elif node.type in {
+                "class_declaration",
+                "function_declaration",
+                "lexical_declaration",
+                "method_definition",
+            }:
                 results.extend(self._js_symbol_from_node(path, source, node, exported=False))
         return results
 
-    def _js_symbol_from_node(self, path: Path, source: str, node: Any, exported: bool) -> list[dict[str, Any]]:
+    def _js_symbol_from_node(
+        self, path: Path, source: str, node: Any, exported: bool
+    ) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
         if node.type in {"class_declaration", "function_declaration", "method_definition"}:
             name_node = node.child_by_field_name("name")
@@ -421,7 +452,9 @@ class AstMiner:
                         "symbol": name,
                         "kind": "variable",
                         "line": node.start_point[0] + 1,
-                        "visibility": "public" if exported or not name.startswith("_") else "private",
+                        "visibility": "public"
+                        if exported or not name.startswith("_")
+                        else "private",
                         "parser_backend": "tree-sitter",
                     }
                 )

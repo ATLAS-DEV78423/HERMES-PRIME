@@ -67,11 +67,15 @@ class GovernanceHooks:
                 issued_to="hermes:governed-upstream",
             )
             evaluation = self._sentinel.evaluate(proposal, capability=token)
-            decision = evaluation.decision.to_dict() if hasattr(evaluation, "decision") else {
-                "permitted": True,
-                "blocking_layer": None,
-                "denial_reason": None,
-            }
+            decision = (
+                evaluation.decision.to_dict()
+                if hasattr(evaluation, "decision")
+                else {
+                    "permitted": True,
+                    "blocking_layer": None,
+                    "denial_reason": None,
+                }
+            )
 
             if not decision.get("permitted", True):
                 msg = f"Action rejected by Sentinel: {decision.get('denial_reason', 'unknown')}"

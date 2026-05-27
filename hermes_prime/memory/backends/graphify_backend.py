@@ -26,11 +26,14 @@ class GraphifyBackend(MemoryBackend):
         workspace_path: str | Path | None = None,
         db_path: str | Path | None = None,
     ) -> None:
-        self.workspace_path = Path(workspace_path).resolve() if workspace_path else Path.cwd().resolve()
+        self.workspace_path = (
+            Path(workspace_path).resolve() if workspace_path else Path.cwd().resolve()
+        )
         self.bridge = GraphifyBridge(workspace_path=self.workspace_path)
 
         db = db_path or self.workspace_path / ".hermes-prime" / "graphify_memory.db"
         from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
+
         self._store = SQLiteMemoryBackend(db)
 
         self._graph_built = False

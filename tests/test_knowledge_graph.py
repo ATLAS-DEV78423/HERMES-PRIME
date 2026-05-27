@@ -111,6 +111,7 @@ class TestKnowledgeGraphPersistence(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_persistence(self):

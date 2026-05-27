@@ -23,7 +23,14 @@ from .contracts import (
     SentinelDecision,
     TrustState,
 )
-from .memory import AtlasBackend, DepthPolicy, MemoryBackend, MemorySearchResult, MemoryStore, ProvenanceLinker, SQLiteMemoryBackend
+from .memory import (
+    AtlasBackend,
+    DepthPolicy,
+    MemoryBackend,
+    MemorySearchResult,
+    MemoryStore,
+    ProvenanceLinker,
+    SQLiteMemoryBackend,
+)
 from .orch import AgentMesh, Dispatcher, RecursionWatchdog, CapabilityScoper
 from .tui import HermesConsole, HermesDashboard, OperatorConsole, TelemetryHeader, boot_sequence
-

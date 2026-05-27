@@ -1,4 +1,5 @@
 """Functional tests for the learning loop subsystem."""
+
 from __future__ import annotations
 
 import os
@@ -211,7 +212,9 @@ def test_prompt_augmenter():
 
         augmenter = PromptAugmenter(registry)
 
-        guidance = augmenter.build_augmentation_block("read some files", action_type="filesystem.read")
+        guidance = augmenter.build_augmentation_block(
+            "read some files", action_type="filesystem.read"
+        )
         assert len(guidance) > 0
         print(f"Augmentation block:\n{guidance}")
 

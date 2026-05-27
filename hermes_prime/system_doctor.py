@@ -544,9 +544,7 @@ def run_repair(
                     backup = _backup_file(trust_path)
                     trust_path.unlink(missing_ok=True)
                     for suffix in ("-wal", "-shm"):
-                        trust_path.with_name(trust_path.name + suffix).unlink(
-                            missing_ok=True
-                        )
+                        trust_path.with_name(trust_path.name + suffix).unlink(missing_ok=True)
                     msg = f"rebuilt (backup: {backup})" if backup else "rebuilt"
                 else:
                     msg = "initialized"
@@ -569,9 +567,7 @@ def run_repair(
                     backup = _backup_file(memory_path)
                     memory_path.unlink(missing_ok=True)
                     for suffix in ("-wal", "-shm"):
-                        memory_path.with_name(memory_path.name + suffix).unlink(
-                            missing_ok=True
-                        )
+                        memory_path.with_name(memory_path.name + suffix).unlink(missing_ok=True)
                     msg = f"rebuilt (backup: {backup})" if backup else "rebuilt"
                 else:
                     msg = "initialized"
@@ -605,7 +601,12 @@ def format_doctor_text(report: DoctorReport) -> str:
     if report.fixable_count:
         lines.append(f"  Auto-fixable issues: {report.fixable_count} (run: hermes repair)")
 
-    by_severity: dict[Severity, list[CheckResult]] = {Severity.ERROR: [], Severity.WARNING: [], Severity.INFO: [], Severity.OK: []}
+    by_severity: dict[Severity, list[CheckResult]] = {
+        Severity.ERROR: [],
+        Severity.WARNING: [],
+        Severity.INFO: [],
+        Severity.OK: [],
+    }
     for check in report.checks:
         if check.severity == Severity.OK:
             continue
@@ -633,8 +634,10 @@ def format_repair_text(report: RepairReport) -> str:
         return "\n".join(lines)
     for action in report.actions:
         status = "ok" if action.success else "failed"
-        applied = "would apply" if report.dry_run and not action.applied else (
-            "applied" if action.applied else "skipped"
+        applied = (
+            "would apply"
+            if report.dry_run and not action.applied
+            else ("applied" if action.applied else "skipped")
         )
         msg = f" — {action.message}" if action.message else ""
         lines.append(f"  [{status}] {action.description} ({applied}){msg}")

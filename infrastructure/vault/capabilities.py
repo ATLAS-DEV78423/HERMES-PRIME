@@ -51,9 +51,14 @@ class CapabilityVault:
     ) -> IntentRoot:
         issued_at = issued_at or utc_now_iso()
         expires_at = (
-            datetime.fromisoformat(issued_at.replace("Z", "+00:00"))
-            + timedelta(seconds=ttl_seconds)
-        ).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            (
+                datetime.fromisoformat(issued_at.replace("Z", "+00:00"))
+                + timedelta(seconds=ttl_seconds)
+            )
+            .astimezone(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         intent_id = new_urn_uuid()
         payload = {
             "intent_root": intent_id,
@@ -103,9 +108,14 @@ class CapabilityVault:
             raise ValueError("capability scope exceeds intent root scope")
         issued_at = issued_at or utc_now_iso()
         expires_at = (
-            datetime.fromisoformat(issued_at.replace("Z", "+00:00"))
-            + timedelta(seconds=ttl_seconds)
-        ).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            (
+                datetime.fromisoformat(issued_at.replace("Z", "+00:00"))
+                + timedelta(seconds=ttl_seconds)
+            )
+            .astimezone(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         nonce = nonce or secrets.token_urlsafe(24)
         token_id = new_urn_uuid()
         payload = {
@@ -175,9 +185,7 @@ class CapabilityVault:
         for hook in self.revocation_hooks:
             hook(token_id)
 
-    def validate_for_action(
-        self, action: ActionProposal, token: CapabilityToken
-    ) -> None:
+    def validate_for_action(self, action: ActionProposal, token: CapabilityToken) -> None:
         if not self.verify_token(token):
             raise ValueError("invalid or expired capability token")
         if action.intent_root != token.intent_root:

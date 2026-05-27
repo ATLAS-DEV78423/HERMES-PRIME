@@ -68,7 +68,9 @@ def record_from_claim(
         updated_at=created,
         checksum=sha256_text(claim.claim),
         confidence=claim.epistemic_confidence,
-        trust_level=claim.trust_state if isinstance(claim.trust_state, TrustState) else TrustState(claim.trust_state),
+        trust_level=claim.trust_state
+        if isinstance(claim.trust_state, TrustState)
+        else TrustState(claim.trust_state),
         lineage=lineage or [],
         causal_parent=causal_parent,
         tags=tags or [],
@@ -91,10 +93,16 @@ def claim_from_record(record: MemoryRecord) -> MemoryClaim:
         },
         epistemic_confidence=record.confidence,
         verification_status=record.validation_status.value,
-        source_trust="validated" if record.trust_level in (TrustState.VALIDATED, TrustState.EXECUTABLE) else "observed",
-        timestamp=record.updated_at.isoformat().replace("+00:00", "Z") if record.updated_at else utc_now_iso(),
+        source_trust="validated"
+        if record.trust_level in (TrustState.VALIDATED, TrustState.EXECUTABLE)
+        else "observed",
+        timestamp=record.updated_at.isoformat().replace("+00:00", "Z")
+        if record.updated_at
+        else utc_now_iso(),
         trust_state=record.trust_level,
-        tier="authoritative" if record.trust_level in (TrustState.VALIDATED, TrustState.EXECUTABLE) else "quarantine",
+        tier="authoritative"
+        if record.trust_level in (TrustState.VALIDATED, TrustState.EXECUTABLE)
+        else "quarantine",
         contradictions=[],
         intent_root=record.intent_root,
     )

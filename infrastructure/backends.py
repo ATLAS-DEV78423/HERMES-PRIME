@@ -144,7 +144,9 @@ class BackendRegistry:
                 "runtime_present": runtime_present,
                 "grammar_packages": grammar_packages,
                 "source_tree_present": source_tree.exists(),
-                "can_use_source_tree": source_tree.exists() and runtime_present and bool(grammar_packages),
+                "can_use_source_tree": source_tree.exists()
+                and runtime_present
+                and bool(grammar_packages),
             },
         )
 
@@ -166,7 +168,11 @@ class BackendRegistry:
             [
                 self.workspace_root / ".hermes-prime" / "opa-policy.wasm",
                 self.workspace_root / ".hermes-prime" / "policy.wasm",
-                self.workspace_root / "infrastructure" / "policy_engine" / "compiled" / "policy.wasm",
+                self.workspace_root
+                / "infrastructure"
+                / "policy_engine"
+                / "compiled"
+                / "policy.wasm",
                 self.workspace_root / "infrastructure" / "policy_engine" / "policy.wasm",
             ]
         )

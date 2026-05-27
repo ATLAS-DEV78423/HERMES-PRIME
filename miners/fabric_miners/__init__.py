@@ -1,2 +1,6 @@
-from .miners import FabricPatternCatalog, PatternClassificationMiner, PatternInjectionMiner, PatternMiner
-
+from .miners import (
+    FabricPatternCatalog,
+    PatternClassificationMiner,
+    PatternInjectionMiner,
+    PatternMiner,
+)

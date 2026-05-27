@@ -146,9 +146,7 @@ class AgentMesh:
         depth = (parent.depth + 1) if parent else 0
 
         if depth > self._max_depth:
-            raise DepthLimitError(
-                f"Agent depth {depth} exceeds max_depth {self._max_depth}"
-            )
+            raise DepthLimitError(f"Agent depth {depth} exceeds max_depth {self._max_depth}")
 
         node = AgentNode(
             agent_id=agent_id,
@@ -271,6 +269,7 @@ class AgentMesh:
     @property
     def active_agent_count(self) -> int:
         return sum(
-            1 for n in self._nodes.values()
+            1
+            for n in self._nodes.values()
             if n.status in (AgentStatus.PENDING, AgentStatus.RUNNING, AgentStatus.IDLE)
         )

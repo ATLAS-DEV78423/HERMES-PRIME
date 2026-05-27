@@ -42,7 +42,10 @@ class BrainMaintenanceAgent:
         }
 
         prune_result = self._prune_low_value_nodes(
-            dry_run, max_age_days, min_confidence, min_access,
+            dry_run,
+            max_age_days,
+            min_confidence,
+            min_access,
         )
         report["pruned_nodes"] = prune_result
 
@@ -96,7 +99,7 @@ class BrainMaintenanceAgent:
         for i, a in enumerate(nodes):
             if a.node_id in visited:
                 continue
-            for b in nodes[i + 1:]:
+            for b in nodes[i + 1 :]:
                 if b.node_id in visited:
                     continue
                 if a.node_type != b.node_type:
@@ -124,7 +127,9 @@ class BrainMaintenanceAgent:
 
                         edges_a = self.graph.get_node_edges(remove_id)
                         for edge in edges_a:
-                            other_id = edge.target_id if edge.source_id == remove_id else edge.source_id
+                            other_id = (
+                                edge.target_id if edge.source_id == remove_id else edge.source_id
+                            )
                             if other_id != keep_id:
                                 self.graph.add_edge(
                                     source_id=keep_id,
@@ -186,9 +191,11 @@ class BrainMaintenanceAgent:
 
     def _compute_similarity(self, a: BrainNode, b: BrainNode) -> float:
         import re
+
         def tokenize(text: str) -> set[str]:
             words = re.findall(r"[a-zA-Z_]\w{2,}", text.lower())
             return {w for w in words if len(w) > 2}
+
         a_tokens = tokenize(f"{a.title} {a.content}")
         b_tokens = tokenize(f"{b.title} {b.content}")
         if not a_tokens or not b_tokens:
@@ -213,13 +220,11 @@ class BrainMaintenanceAgent:
                 orphaned += 1
 
         low_conf = sum(1 for n in all_nodes if n.confidence < 0.3)
-        old_unused = sum(
-            1 for n in all_nodes
-            if n.age_days > 30 and n.access_count == 0
-        )
+        old_unused = sum(1 for n in all_nodes if n.age_days > 30 and n.access_count == 0)
 
         unsolved = sum(
-            1 for n in all_nodes
+            1
+            for n in all_nodes
             if n.node_type == NodeType.PROBLEM and not n.metadata.get("solved", False)
         )
 
@@ -232,12 +237,19 @@ class BrainMaintenanceAgent:
             "unsolved_problems": unsolved,
             "by_type": metrics["by_node_type"],
             "health_score": self._compute_health_score(
-                metrics["total_nodes"], orphaned, low_conf, old_unused,
+                metrics["total_nodes"],
+                orphaned,
+                low_conf,
+                old_unused,
             ),
         }
 
     def _compute_health_score(
-        self, total: int, orphaned: int, low_conf: int, old_unused: int,
+        self,
+        total: int,
+        orphaned: int,
+        low_conf: int,
+        old_unused: int,
     ) -> float:
         if total == 0:
             return 1.0

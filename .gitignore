@@ -23,8 +23,11 @@ wheels/
 
 # Hermes Prime specific
 .hermes-prime/
-!hermes-prime/bin/.keep
+!.hermes-prime/bin/.keep
 infrastructure/policy_engine/compiled/
+
+# Debug artifacts
+*.debug
 
 # Virtual environments
 venv/

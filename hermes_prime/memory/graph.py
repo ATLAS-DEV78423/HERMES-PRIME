@@ -15,6 +15,7 @@ class KnowledgeGraph:
 
     def _init_db(self) -> None:
         import sqlite3
+
         Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(self._db_path)
         self._conn.execute("""

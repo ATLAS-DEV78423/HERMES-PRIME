@@ -42,9 +42,11 @@ def run_governed_chat(
 
     # Forward to upstream CLI
     import sys
+
     sys.argv = ["hermes", "chat", "--model", model]
 
     from hermes_cli.main import main as upstream_main
+
     return upstream_main()
 
 

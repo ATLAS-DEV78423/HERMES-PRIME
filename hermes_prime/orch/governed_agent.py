@@ -58,9 +58,11 @@ class GovernedAgentWrapper:
         ) -> str:
             decision = self._evaluate_action(function_name, function_args)
             if not decision.get("permitted", False):
-                return json.dumps({
-                    "error": f"Action rejected by Sentinel: {decision.get('denial_reason', 'unknown')}",
-                })
+                return json.dumps(
+                    {
+                        "error": f"Action rejected by Sentinel: {decision.get('denial_reason', 'unknown')}",
+                    }
+                )
             result = original(function_name, function_args, **kwargs)
             self._post_execution_audit(function_name, function_args, decision, result)
             return result
@@ -112,9 +114,7 @@ class GovernedAgentWrapper:
         }
         return mapping.get(tool_name, ActionType.FILESYSTEM_READ)
 
-    def _post_execution_audit(
-        self, function_name, function_args, decision, result
-    ) -> None:
+    def _post_execution_audit(self, function_name, function_args, decision, result) -> None:
         if not self._trust_store:
             return
         trace_id = new_urn_uuid()

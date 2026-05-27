@@ -186,11 +186,13 @@ class BrainJournal:
             neighbors = self.graph.get_neighbors(sol.node_id)
             for neighbor, edge in neighbors:
                 if neighbor.node_id != problem_id:
-                    path.append({
-                        "type": f"related_{neighbor.node_type.value}",
-                        "node": neighbor.to_dict(),
-                        "via": edge.edge_type.value,
-                    })
+                    path.append(
+                        {
+                            "type": f"related_{neighbor.node_type.value}",
+                            "node": neighbor.to_dict(),
+                            "via": edge.edge_type.value,
+                        }
+                    )
         return path
 
     def export_obsidian_vault(self, output_dir: str | Path) -> dict[str, Any]:
@@ -201,8 +203,12 @@ class BrainJournal:
         nodes = self.graph.get_all_nodes()
         edge_map: dict[str, list[tuple[str, str, str]]] = {}
         for edge in self.graph.get_all_edges():
-            edge_map.setdefault(edge.source_id, []).append((edge.target_id, edge.edge_type.value, str(edge.weight)))
-            edge_map.setdefault(edge.target_id, []).append((edge.source_id, edge.edge_type.value, str(edge.weight)))
+            edge_map.setdefault(edge.source_id, []).append(
+                (edge.target_id, edge.edge_type.value, str(edge.weight))
+            )
+            edge_map.setdefault(edge.target_id, []).append(
+                (edge.source_id, edge.edge_type.value, str(edge.weight))
+            )
 
         counts: dict[str, int] = {"notes": 0, "links": 0}
         for node in nodes:
@@ -217,7 +223,9 @@ class BrainJournal:
             for target_id, etype, weight in links:
                 target = self.graph.get_node(target_id)
                 if target:
-                    target_safe = target.title.replace("/", "-").replace(":", "-").replace(" ", "_")[:80]
+                    target_safe = (
+                        target.title.replace("/", "-").replace(":", "-").replace(" ", "_")[:80]
+                    )
                     target_file = f"{target_safe}_{target.node_id[-8:]}"
                     wiki_lines.append(f"- [[{target_file}|{target.title}]] _{etype}_ (w:{weight})")
 

@@ -2,7 +2,6 @@ import time
 from typing import Callable
 
 
-
 def boot_sequence(
     print_fn: Callable = print,
     delay: float = 0.15,
@@ -82,7 +81,7 @@ def governance_verification(
             if j < i:
                 print_fn(f"  [\u2713] {layer}")
             elif j == i:
-                print_fn(f"  [\u00B7] {layer}")
+                print_fn(f"  [\u00b7] {layer}")
             else:
                 print_fn(f"  [ ] {layer}")
         if i < len(layers):
@@ -102,7 +101,7 @@ def watchdog_spinner(
     delay: float = 0.2,
     print_fn: Callable = print,
 ) -> None:
-    frames = ["\u25C9\u25CB\u25CB", "\u25CB\u25C9\u25CB", "\u25CB\u25CB\u25C9"]
+    frames = ["\u25c9\u25cb\u25cb", "\u25cb\u25c9\u25cb", "\u25cb\u25cb\u25c9"]
     for i in range(ticks):
         frame = frames[i % len(frames)]
         print_fn(f"\r  [ WATCHDOG ]  {frame}", end="")

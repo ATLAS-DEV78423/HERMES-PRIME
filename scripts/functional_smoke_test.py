@@ -242,7 +242,11 @@ def main() -> int:
     from contextlib import redirect_stdout
 
     doctor_report = run_doctor(ROOT)
-    results.append(_check("system_doctor.run_doctor", doctor_report.healthy or doctor_report.fixable_count >= 0))
+    results.append(
+        _check(
+            "system_doctor.run_doctor", doctor_report.healthy or doctor_report.fixable_count >= 0
+        )
+    )
 
     out = io.StringIO()
     with redirect_stdout(out):

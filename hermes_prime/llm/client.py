@@ -8,6 +8,7 @@ from typing import Optional
 @dataclass
 class LLMRequest:
     """Structured request to an LLM."""
+
     model: str
     messages: list[dict[str, str]]  # [{"role": "user|system", "content": "..."}, ...]
     temperature: float = 0.7
@@ -19,6 +20,7 @@ class LLMRequest:
 @dataclass
 class LLMResponse:
     """Structured response from an LLM."""
+
     model: str
     message_content: str
     finish_reason: str  # "stop", "length", "error", etc.

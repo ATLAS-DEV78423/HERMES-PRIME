@@ -23,6 +23,7 @@ class RecursionWatchdog:
         limit = self._max_depth if self._max_depth is not None else self._mesh.max_depth
         if child_depth > limit:
             from .mesh import DepthLimitError
+
             raise DepthLimitError(
                 f"RecursionWatchdog: spawn at depth {child_depth} exceeds limit {limit} "
                 f"(parent={parent_id})"

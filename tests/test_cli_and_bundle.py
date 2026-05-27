@@ -42,9 +42,7 @@ class CliAndBundleTests(unittest.TestCase):
         self.assertIn("backends", payload)
 
     def test_sentinel_service_reports_source(self) -> None:
-        service = SentinelService(
-            workspace_root=self.root, policy_root=self.policy_root
-        )
+        service = SentinelService(workspace_root=self.root, policy_root=self.policy_root)
         payload = service.bundle.manifest()
         self.assertIn("opa_available", payload)
         self.assertTrue(payload["available"])
@@ -59,7 +57,7 @@ class CliAndBundleTests(unittest.TestCase):
                     "--json",
                     "inspect",
                 ]
-        )
+            )
         self.assertEqual(code, 0)
         payload = json.loads(out.getvalue())
         self.assertTrue(payload["bundle"]["available"])
@@ -77,7 +75,7 @@ class CliAndBundleTests(unittest.TestCase):
                     "--json",
                     "hp-doctor",
                 ]
-        )
+            )
         self.assertEqual(code, 0)
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["workspace_root"], str(self.root))

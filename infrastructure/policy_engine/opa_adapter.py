@@ -59,7 +59,9 @@ class OpaPolicyAdapter:
             "workspace_root": self.bundle.root.parent.parent.resolve().as_posix(),
             "advisory_signals": advisory_signals or [],
         }
-        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as handle:
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".json", delete=False, encoding="utf-8"
+        ) as handle:
             json.dump(input_payload, handle, sort_keys=True)
             input_path = Path(handle.name)
         try:

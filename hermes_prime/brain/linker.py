@@ -16,16 +16,84 @@ class AutoLinker:
     def __init__(self, graph: NeuralGraph):
         self.graph = graph
         self._stop_words = {
-            "the", "a", "an", "is", "are", "was", "were", "be", "been",
-            "being", "have", "has", "had", "do", "does", "did", "will",
-            "would", "could", "should", "may", "might", "shall", "can",
-            "to", "of", "in", "for", "on", "with", "at", "by", "from",
-            "as", "into", "through", "during", "before", "after", "above",
-            "below", "between", "out", "off", "over", "under", "again",
-            "further", "then", "once", "here", "there", "when", "where",
-            "why", "how", "all", "each", "every", "both", "few", "more",
-            "most", "other", "some", "such", "no", "nor", "not", "only",
-            "own", "same", "so", "than", "too", "very", "just", "it",
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "shall",
+            "can",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
+            "as",
+            "into",
+            "through",
+            "during",
+            "before",
+            "after",
+            "above",
+            "below",
+            "between",
+            "out",
+            "off",
+            "over",
+            "under",
+            "again",
+            "further",
+            "then",
+            "once",
+            "here",
+            "there",
+            "when",
+            "where",
+            "why",
+            "how",
+            "all",
+            "each",
+            "every",
+            "both",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "nor",
+            "not",
+            "only",
+            "own",
+            "same",
+            "so",
+            "than",
+            "too",
+            "very",
+            "just",
+            "it",
         }
 
     def link_new_node(self, node_id: str) -> int:
@@ -44,7 +112,9 @@ class AutoLinker:
         new_tokens = self._extract_keywords(f"{new_node.title} {new_node.content}")
 
         for existing_node in existing:
-            existing_tokens = self._extract_keywords(f"{existing_node.title} {existing_node.content}")
+            existing_tokens = self._extract_keywords(
+                f"{existing_node.title} {existing_node.content}"
+            )
             overlap = new_tokens & existing_tokens
             if len(overlap) < 2:
                 continue
@@ -90,7 +160,9 @@ class AutoLinker:
         )
         return edge is not None
 
-    def find_related(self, node_id: str, min_weight: float = 0.3, limit: int = 10) -> list[BrainNode]:
+    def find_related(
+        self, node_id: str, min_weight: float = 0.3, limit: int = 10
+    ) -> list[BrainNode]:
         """Find nodes related to the given node via keyword overlap."""
         node = self.graph.get_node(node_id)
         if not node:
@@ -141,6 +213,9 @@ class AutoLinker:
             return EdgeType.SOLVES
         if a.node_type == NodeType.TOPIC and b.node_type == NodeType.TOPIC:
             return EdgeType.EXTENDS
-        if a.node_type == NodeType.DECISION and b.node_type in (NodeType.PROBLEM, NodeType.OBSERVATION):
+        if a.node_type == NodeType.DECISION and b.node_type in (
+            NodeType.PROBLEM,
+            NodeType.OBSERVATION,
+        ):
             return EdgeType.PRODUCES
         return EdgeType.RELATES_TO

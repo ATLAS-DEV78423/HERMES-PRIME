@@ -50,8 +50,12 @@ class AgentMeshTests(unittest.TestCase):
     def test_depth_limit_exceeded(self) -> None:
         mesh = AgentMesh(max_depth=2)
         n1 = mesh.register_agent(task_description="1", capability_scope="/ws")
-        n2 = mesh.register_agent(task_description="2", capability_scope="/ws", parent_id=n1.agent_id)
-        n3 = mesh.register_agent(task_description="3", capability_scope="/ws", parent_id=n2.agent_id)
+        n2 = mesh.register_agent(
+            task_description="2", capability_scope="/ws", parent_id=n1.agent_id
+        )
+        n3 = mesh.register_agent(
+            task_description="3", capability_scope="/ws", parent_id=n2.agent_id
+        )
         with self.assertRaises(DepthLimitError):
             mesh.register_agent(task_description="4", capability_scope="/ws", parent_id=n3.agent_id)
 
@@ -94,8 +98,12 @@ class AgentMeshTests(unittest.TestCase):
 
     def test_lineage(self) -> None:
         n1 = self.mesh.register_agent(task_description="root", capability_scope="/ws")
-        n2 = self.mesh.register_agent(task_description="mid", capability_scope="/ws", parent_id=n1.agent_id)
-        n3 = self.mesh.register_agent(task_description="leaf", capability_scope="/ws", parent_id=n2.agent_id)
+        n2 = self.mesh.register_agent(
+            task_description="mid", capability_scope="/ws", parent_id=n1.agent_id
+        )
+        n3 = self.mesh.register_agent(
+            task_description="leaf", capability_scope="/ws", parent_id=n2.agent_id
+        )
         lineage = self.mesh.lineage(n3.agent_id)
         self.assertEqual(len(lineage), 3)
         self.assertEqual(lineage[0].agent_id, n1.agent_id)
@@ -104,9 +112,15 @@ class AgentMeshTests(unittest.TestCase):
 
     def test_subgraph(self) -> None:
         n1 = self.mesh.register_agent(task_description="root", capability_scope="/ws")
-        n2 = self.mesh.register_agent(task_description="c1", capability_scope="/ws", parent_id=n1.agent_id)
-        n3 = self.mesh.register_agent(task_description="c2", capability_scope="/ws", parent_id=n1.agent_id)
-        n4 = self.mesh.register_agent(task_description="gc", capability_scope="/ws", parent_id=n2.agent_id)
+        n2 = self.mesh.register_agent(
+            task_description="c1", capability_scope="/ws", parent_id=n1.agent_id
+        )
+        n3 = self.mesh.register_agent(
+            task_description="c2", capability_scope="/ws", parent_id=n1.agent_id
+        )
+        n4 = self.mesh.register_agent(
+            task_description="gc", capability_scope="/ws", parent_id=n2.agent_id
+        )
         sg = self.mesh.subgraph(n1.agent_id)
         self.assertEqual(len(sg), 4)
         sg_ids = {n.agent_id for n in sg}
@@ -125,7 +139,9 @@ class AgentMeshTests(unittest.TestCase):
 
     def test_remove_cascades(self) -> None:
         n1 = self.mesh.register_agent(task_description="root", capability_scope="/ws")
-        self.mesh.register_agent(task_description="child", capability_scope="/ws", parent_id=n1.agent_id)
+        self.mesh.register_agent(
+            task_description="child", capability_scope="/ws", parent_id=n1.agent_id
+        )
         self.mesh.remove(n1.agent_id)
         self.assertEqual(self.mesh.agent_count, 0)
 
@@ -160,11 +176,17 @@ class RecursionWatchdogTests(unittest.TestCase):
         mesh = AgentMesh(max_depth=3)
         n1 = mesh.register_agent(task_description="r", capability_scope="/ws")
         mesh.transition(n1.agent_id, AgentStatus.RUNNING)
-        n2 = mesh.register_agent(task_description="c1", capability_scope="/ws", parent_id=n1.agent_id)
+        n2 = mesh.register_agent(
+            task_description="c1", capability_scope="/ws", parent_id=n1.agent_id
+        )
         mesh.transition(n2.agent_id, AgentStatus.RUNNING)
-        n3 = mesh.register_agent(task_description="c2", capability_scope="/ws", parent_id=n2.agent_id)
+        n3 = mesh.register_agent(
+            task_description="c2", capability_scope="/ws", parent_id=n2.agent_id
+        )
         mesh.transition(n3.agent_id, AgentStatus.RUNNING)
-        n4 = mesh.register_agent(task_description="c3", capability_scope="/ws", parent_id=n3.agent_id)
+        n4 = mesh.register_agent(
+            task_description="c3", capability_scope="/ws", parent_id=n3.agent_id
+        )
         mesh.transition(n4.agent_id, AgentStatus.RUNNING)
 
         watchdog = RecursionWatchdog(mesh)
@@ -187,7 +209,9 @@ class RecursionWatchdogTests(unittest.TestCase):
     def test_terminate_chain(self) -> None:
         n1 = self.mesh.register_agent(task_description="r", capability_scope="/ws")
         self.mesh.transition(n1.agent_id, AgentStatus.RUNNING)
-        n2 = self.mesh.register_agent(task_description="c", capability_scope="/ws", parent_id=n1.agent_id)
+        n2 = self.mesh.register_agent(
+            task_description="c", capability_scope="/ws", parent_id=n1.agent_id
+        )
         self.mesh.transition(n2.agent_id, AgentStatus.RUNNING)
         killed = self.watchdog.terminate_chain(n1.agent_id)
         self.assertEqual(killed, 2)
@@ -308,6 +332,7 @@ class CapabilityScoperTests(unittest.TestCase):
 
     def _make_token(self, scope: str = "/workspace"):
         from hermes_prime.contracts import CapabilityToken
+
         return CapabilityToken(
             token_id=new_urn_uuid(),
             capability="agent.spawn",

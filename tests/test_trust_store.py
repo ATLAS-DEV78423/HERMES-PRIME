@@ -82,7 +82,9 @@ class TrustStoreTests(unittest.TestCase):
             source_trust="heuristic",
             timestamp=now,
             trust_state=TrustState.OBSERVED,
-            contradictions=[{"conflicting_fact_id": new_urn_uuid(), "conflict_type": "logical_negation"}],
+            contradictions=[
+                {"conflicting_fact_id": new_urn_uuid(), "conflict_type": "logical_negation"}
+            ],
         )
         self.store.store_memory_claim(claim)
         claim.trust_state = TrustState.VALIDATED

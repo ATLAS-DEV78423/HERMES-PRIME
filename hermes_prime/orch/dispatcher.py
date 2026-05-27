@@ -111,9 +111,7 @@ class Dispatcher:
         killed = self._watchdog.terminate_chain(agent_id)
         logger.info("Killed agent %s and %d descendants", agent_id, killed - 1 if killed else 0)
 
-    def list_agents(
-        self, status: AgentStatus | None = None
-    ) -> list[dict[str, Any]]:
+    def list_agents(self, status: AgentStatus | None = None) -> list[dict[str, Any]]:
         return [n.to_dict() for n in self._mesh.list_all(status=status)]
 
     def get_status(self, agent_id: str) -> dict[str, Any] | None:

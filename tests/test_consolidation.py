@@ -50,6 +50,7 @@ class TestReflectiveConsolidator(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _write_sources(self, count: int = 3) -> list[str]:
@@ -91,8 +92,14 @@ class TestReflectiveConsolidator(unittest.TestCase):
             intent_root=self.intent,
             summary="Task summary",
             patterns=[
-                {"text": "Pattern: API calls should use retry with exponential backoff", "type": "operational"},
-                {"text": "Pattern: Database migrations should be tested in staging first", "type": "operational"},
+                {
+                    "text": "Pattern: API calls should use retry with exponential backoff",
+                    "type": "operational",
+                },
+                {
+                    "text": "Pattern: Database migrations should be tested in staging first",
+                    "type": "operational",
+                },
             ],
         )
         result = self.consolidator.consolidate(request)

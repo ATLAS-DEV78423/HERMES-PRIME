@@ -40,20 +40,16 @@ class ReflectiveConsolidator:
 
     def consolidate(self, request: ConsolidationRequest) -> ConsolidationResult:
         all_claims = self.memory_store.list_all().claims
-        source_claims = [
-            c for c in all_claims
-            if c.intent_root == request.intent_root.intent_root
-        ]
+        source_claims = [c for c in all_claims if c.intent_root == request.intent_root.intent_root]
 
         if request.source_fact_ids is not None:
-            source_claims = [
-                c for c in source_claims
-                if c.fact_id in request.source_fact_ids
-            ]
+            source_claims = [c for c in source_claims if c.fact_id in request.source_fact_ids]
             source_claims.sort(
-                key=lambda c: request.source_fact_ids.index(c.fact_id)
-                if c.fact_id in request.source_fact_ids
-                else 0,
+                key=lambda c: (
+                    request.source_fact_ids.index(c.fact_id)
+                    if c.fact_id in request.source_fact_ids
+                    else 0
+                ),
             )
 
         source_ids = [c.fact_id for c in source_claims]
@@ -62,7 +58,11 @@ class ReflectiveConsolidator:
 
         ref_result = self.memory_store.write(
             claim_text=request.summary,
-            source={"agent": "system:consolidator", "memory_type": "reflective", "consolidation_of": request.intent_root.intent_root},
+            source={
+                "agent": "system:consolidator",
+                "memory_type": "reflective",
+                "consolidation_of": request.intent_root.intent_root,
+            },
             intent_root=request.intent_root,
             epistemic_confidence=0.9,
             source_trust="validated",
@@ -98,10 +98,12 @@ class ReflectiveConsolidator:
             )
 
             if pat_result.success:
-                pattern_results.append(PatternResult(
-                    fact_id=pat_result.fact_id,
-                    pattern=pattern,
-                ))
+                pattern_results.append(
+                    PatternResult(
+                        fact_id=pat_result.fact_id,
+                        pattern=pattern,
+                    )
+                )
 
         return ConsolidationResult(
             success=True,
@@ -117,7 +119,8 @@ class ReflectiveConsolidator:
     ) -> list[MemoryClaim]:
         all_claims = self.memory_store.list_all().claims
         return [
-            c for c in all_claims
+            c
+            for c in all_claims
             if c.intent_root == intent_root
             and isinstance(c.source, dict)
             and c.source.get("memory_type") == "reflective"
@@ -129,7 +132,8 @@ class ReflectiveConsolidator:
     ) -> list[MemoryClaim]:
         all_claims = self.memory_store.list_all().claims
         return [
-            c for c in all_claims
+            c
+            for c in all_claims
             if c.intent_root == intent_root
             and isinstance(c.source, dict)
             and c.source.get("memory_type") == "strategic"
@@ -144,9 +148,11 @@ class ReflectiveConsolidator:
         for lid in lineage_ids:
             claim = self.memory_store.backend.get(lid)
             if claim is not None:
-                result.append({
-                    "fact_id": claim.fact_id,
-                    "claim": claim.claim,
-                    "source": claim.source,
-                })
+                result.append(
+                    {
+                        "fact_id": claim.fact_id,
+                        "claim": claim.claim,
+                        "source": claim.source,
+                    }
+                )
         return result

@@ -122,6 +122,7 @@ class HermesDashboard:
                 telemetry = self.query_one("#telemetry", Static)
                 if self._mock:
                     import random
+
                     agents = random.randint(0, 20)
                     queue = random.randint(0, 200)
                     latency = random.uniform(5, 50)
@@ -135,8 +136,14 @@ class HermesDashboard:
                     threat = 0.0
                 telemetry.update(self._build_telemetry_dynamic(agents, queue, latency, mem, threat))
 
-            def _build_telemetry_dynamic(self, agents: int, queue: int, latency: float, mem: float, threat: float) -> str:
-                heading = "HERMES-PRIME :: LIVE TELEMETRY (SIMULATED)" if self._mock else "HERMES-PRIME :: LIVE TELEMETRY"
+            def _build_telemetry_dynamic(
+                self, agents: int, queue: int, latency: float, mem: float, threat: float
+            ) -> str:
+                heading = (
+                    "HERMES-PRIME :: LIVE TELEMETRY (SIMULATED)"
+                    if self._mock
+                    else "HERMES-PRIME :: LIVE TELEMETRY"
+                )
                 return (
                     "\u250c" + "\u2500" * 45 + "\u2510\n"
                     f"\u2502 {heading:<44}\u2502\n"
@@ -178,7 +185,11 @@ class HermesDashboard:
         )
 
     def _build_static_telemetry(self, mock: bool = True) -> str:
-        heading = "HERMES-PRIME :: LIVE TELEMETRY (SIMULATED)" if mock else "HERMES-PRIME :: LIVE TELEMETRY"
+        heading = (
+            "HERMES-PRIME :: LIVE TELEMETRY (SIMULATED)"
+            if mock
+            else "HERMES-PRIME :: LIVE TELEMETRY"
+        )
         return (
             "\u250c" + "\u2500" * 45 + "\u2510\n"
             f"\u2502 {heading:<44}\u2502\n"

@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Any
 
 
-
 def divider_thin(length: int | None = None) -> str:
     width = length or shutil.get_terminal_size().columns
     return "\u2500" * width
@@ -125,12 +124,7 @@ class AgentMeshVisualizer:
         return self._render_mesh()
 
     def _render_empty(self) -> str:
-        return (
-            "  [ORCHESTRATOR]\n"
-            "       |\n"
-            "     (idle)\n\n"
-            "  MESH STATUS :: STANDBY"
-        )
+        return "  [ORCHESTRATOR]\n       |\n     (idle)\n\n  MESH STATUS :: STANDBY"
 
     def _render_mesh(self) -> str:
         agent_ids = [a.get("agent_id", "?")[:8] for a in self._agents]
@@ -152,7 +146,9 @@ class AgentMeshVisualizer:
             lines.append(line)
 
         statuses = [a.get("status", "unknown") for a in self._agents]
-        mesh_status = "SYNCHRONIZED" if all(s in ("running", "completed") for s in statuses) else "ACTIVE"
+        mesh_status = (
+            "SYNCHRONIZED" if all(s in ("running", "completed") for s in statuses) else "ACTIVE"
+        )
         lines.append(f"\n  MESH STATUS :: {mesh_status}")
         return "\n".join(lines)
 

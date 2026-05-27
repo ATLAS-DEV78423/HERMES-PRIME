@@ -92,7 +92,9 @@ class TestTrustFilter(unittest.TestCase):
         self.assertIn("id-5", fact_ids)
 
     def test_filter_by_tier_authoritative(self):
-        authoritative = _make_result("auth-1", "auth claim", tier="authoritative", trust_state="validated")
+        authoritative = _make_result(
+            "auth-1", "auth claim", tier="authoritative", trust_state="validated"
+        )
         results = self.results + [authoritative]
         filtered = self.filter.filter(results, min_tier="authoritative")
         self.assertEqual(len(filtered), 1)
@@ -187,9 +189,7 @@ class TestChainCompressor(unittest.TestCase):
         self.graph.add_edge("d", "c")
         self.graph.add_edge("c", "b")
         self.graph.add_edge("b", "a")
-        results = [
-            _make_result("a", f"level-{i}") for i in range(5)
-        ]
+        results = [_make_result("a", f"level-{i}") for i in range(5)]
         for i, r in enumerate(results):
             r.fact_id = ["a", "b", "c", "d", "e"][i]
         chains = self.compressor.compress(results)
@@ -216,6 +216,7 @@ class TestContextCompiler(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_compile_returns_results(self):
@@ -234,7 +235,9 @@ class TestContextCompiler(unittest.TestCase):
 
     def test_compile_filters_by_confidence(self):
         self.store.write("low conf fact", {"agent": "test"}, self.intent, epistemic_confidence=0.3)
-        self.store.write("high conf fact 1", {"agent": "test"}, self.intent, epistemic_confidence=0.9)
+        self.store.write(
+            "high conf fact 1", {"agent": "test"}, self.intent, epistemic_confidence=0.9
+        )
         query = ContextQuery(query="conf", min_confidence=0.5)
         result = self.compiler.compile(query)
         for r in result.memories:
@@ -249,7 +252,9 @@ class TestContextCompiler(unittest.TestCase):
     def test_compile_with_chain_compression(self):
         w1 = self.store.write("root cause", {"agent": "test"}, self.intent, causal_parent=None)
         self.store.write(
-            "followup", {"agent": "test"}, self.intent,
+            "followup",
+            {"agent": "test"},
+            self.intent,
             causal_parent=w1.fact_id,
         )
         query = ContextQuery(query="", limit=10, compress_chains=True)

@@ -41,6 +41,7 @@ class TestSQLiteMemoryBackend(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _make_claim(self, fact_id: str | None = None, claim_text: str = "test fact") -> MemoryClaim:
@@ -140,6 +141,7 @@ class TestMemoryStore(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_write_and_recall(self):

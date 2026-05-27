@@ -53,6 +53,7 @@ class VaultClient:
             return
         try:
             import hvac
+
             self._client = hvac.Client(
                 url=self._url,
                 token=self._token,

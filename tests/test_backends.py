@@ -15,9 +15,9 @@ class BackendRegistryTests(unittest.TestCase):
         (self.root / "external" / "opa" / "internal" / "compiler" / "wasm" / "opa").mkdir(
             parents=True
         )
-        (self.root / "external" / "opa" / "internal" / "compiler" / "wasm" / "opa" / "opa.wasm").write_bytes(
-            b"wasm"
-        )
+        (
+            self.root / "external" / "opa" / "internal" / "compiler" / "wasm" / "opa" / "opa.wasm"
+        ).write_bytes(b"wasm")
         (self.root / "external" / "tree-sitter").mkdir(parents=True)
 
     def test_backend_manifest_reports_native_and_fallback_paths(self) -> None:
@@ -38,7 +38,9 @@ class BackendRegistryTests(unittest.TestCase):
         opa_binary.write_bytes(b"binary")
         registry = BackendRegistry(self.root)
         self.assertEqual(registry.opa_executable(), opa_binary.resolve())
-        self.assertEqual(registry.manifest()["backends"]["opa"]["details"]["binary"], str(opa_binary.resolve()))
+        self.assertEqual(
+            registry.manifest()["backends"]["opa"]["details"]["binary"], str(opa_binary.resolve())
+        )
 
 
 if __name__ == "__main__":

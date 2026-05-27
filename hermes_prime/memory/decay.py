@@ -49,7 +49,11 @@ class DecayPolicy:
 
     def is_exempt(self, claim: MemoryClaim) -> bool:
         if self.immutable_decay_exempt:
-            ts = claim.trust_state if isinstance(claim.trust_state, TrustState) else TrustState(claim.trust_state.upper())
+            ts = (
+                claim.trust_state
+                if isinstance(claim.trust_state, TrustState)
+                else TrustState(claim.trust_state.upper())
+            )
             if ts == TrustState.EXECUTABLE:
                 return True
             mt = _memory_type_from_claim(claim)
@@ -57,7 +61,9 @@ class DecayPolicy:
                 return True
         return False
 
-    def effective_age_ratio(self, claim: MemoryClaim, access_days_since: Optional[int] = None) -> float:
+    def effective_age_ratio(
+        self, claim: MemoryClaim, access_days_since: Optional[int] = None
+    ) -> float:
         if self.is_exempt(claim):
             return 0.0
         memory_type = _memory_type_from_claim(claim)
@@ -77,7 +83,7 @@ class DecayPolicy:
 
         if access_days_since is not None and self.access_decay_half_life_days > 0:
             access_ratio = access_days_since / self.access_decay_half_life_days
-            ratio *= (1.0 + access_ratio * 0.5)
+            ratio *= 1.0 + access_ratio * 0.5
 
         return ratio
 
@@ -179,7 +185,11 @@ class DecayScheduler:
 
         if ratio >= 1.0:
             if memory_type in ("episodic", "semantic"):
-                current_trust = claim.trust_state if isinstance(claim.trust_state, TrustState) else TrustState(claim.trust_state.upper())
+                current_trust = (
+                    claim.trust_state
+                    if isinstance(claim.trust_state, TrustState)
+                    else TrustState(claim.trust_state.upper())
+                )
                 if current_trust == TrustState.VALIDATED:
                     claim.trust_state = TrustState.OBSERVED
                     self.backend.store(claim)
@@ -199,7 +209,11 @@ class DecayScheduler:
             return
 
         if ratio >= 0.8 and memory_type in ("working",):
-            current_trust = claim.trust_state if isinstance(claim.trust_state, TrustState) else TrustState(claim.trust_state.upper())
+            current_trust = (
+                claim.trust_state
+                if isinstance(claim.trust_state, TrustState)
+                else TrustState(claim.trust_state.upper())
+            )
             if current_trust in (TrustState.UNVERIFIED, TrustState.OBSERVED):
                 self.backend.delete(claim.fact_id)
                 result.deleted_count += 1

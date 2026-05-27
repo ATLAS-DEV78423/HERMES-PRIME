@@ -34,6 +34,7 @@ class MemPalaceBackend(MemoryBackend):
         self._ensure_initialized()
         if self._collection is None:
             from mempalace.palace import get_collection
+
             self._collection = get_collection(self.palace_path)
         return self._collection
 
@@ -59,22 +60,24 @@ class MemPalaceBackend(MemoryBackend):
         # store fact_id in source_file (mempalace normalizes to basename)
         # and also in a dedicated hermes_id metadata field for reliable lookup
         import hashlib
+
         drawer_id = (
-            f"hermes_{wing}_{room}_"
-            + hashlib.sha256(claim.claim.encode("utf-8")).hexdigest()[:24]
+            f"hermes_{wing}_{room}_" + hashlib.sha256(claim.claim.encode("utf-8")).hexdigest()[:24]
         )
         collection.upsert(
             documents=[claim.claim],
             ids=[drawer_id],
-            metadatas=[{
-                "wing": wing,
-                "room": room,
-                "source_file": claim.fact_id,
-                "hermes_id": claim.fact_id,
-                "chunk_index": 0,
-                "added_by": "hermes-prime",
-                "filed_at": utc_now_iso(),
-            }],
+            metadatas=[
+                {
+                    "wing": wing,
+                    "room": room,
+                    "source_file": claim.fact_id,
+                    "hermes_id": claim.fact_id,
+                    "chunk_index": 0,
+                    "added_by": "hermes-prime",
+                    "filed_at": utc_now_iso(),
+                }
+            ],
         )
 
     def get(self, fact_id: str) -> MemoryClaim | None:
@@ -103,6 +106,7 @@ class MemPalaceBackend(MemoryBackend):
         self._ensure_initialized()
         try:
             from mempalace.searcher import search_memories
+
             result = search_memories(
                 query=query,
                 palace_path=self.palace_path,
@@ -112,20 +116,22 @@ class MemPalaceBackend(MemoryBackend):
                 search_results = []
                 for r in result["results"]:
                     fact_id = self._fact_id_from_drawer(r)
-                    search_results.append(MemorySearchResult(
-                        fact_id=fact_id,
-                        claim=r.get("text", ""),
-                        source={"agent": r.get("room", "unknown")},
-                        epistemic_confidence=float(r.get("similarity", 0.0)),
-                        verification_status="unverified",
-                        source_trust="observed",
-                        timestamp=utc_now_iso(),
-                        trust_state=TrustState.UNVERIFIED.value,
-                        tier=MemoryTier.QUARANTINE.value,
-                        contradictions=[],
-                        intent_root="",
-                        similarity=float(r.get("similarity", 0.0)),
-                    ))
+                    search_results.append(
+                        MemorySearchResult(
+                            fact_id=fact_id,
+                            claim=r.get("text", ""),
+                            source={"agent": r.get("room", "unknown")},
+                            epistemic_confidence=float(r.get("similarity", 0.0)),
+                            verification_status="unverified",
+                            source_trust="observed",
+                            timestamp=utc_now_iso(),
+                            trust_state=TrustState.UNVERIFIED.value,
+                            tier=MemoryTier.QUARANTINE.value,
+                            contradictions=[],
+                            intent_root="",
+                            similarity=float(r.get("similarity", 0.0)),
+                        )
+                    )
                 return search_results
             return []
         except Exception:
@@ -144,11 +150,13 @@ class MemPalaceBackend(MemoryBackend):
                     metadata = metadatas[i] if i < len(metadatas) else {}
                     content = documents[i] if i < len(documents) else ""
                     fact_id = self._fact_id_from_source(metadata)
-                    claims.append(self._claim_from_mempalace_result(
-                        fact_id=fact_id,
-                        content=content,
-                        metadata=metadata,
-                    ))
+                    claims.append(
+                        self._claim_from_mempalace_result(
+                            fact_id=fact_id,
+                            content=content,
+                            metadata=metadata,
+                        )
+                    )
             return claims
         except Exception:
             return []
@@ -203,7 +211,10 @@ class MemPalaceBackend(MemoryBackend):
         return MemoryClaim(
             fact_id=fact_id,
             claim=content,
-            source={"agent": agent, "memory_type": metadata.get("wing", "episodic") if metadata else "episodic"},
+            source={
+                "agent": agent,
+                "memory_type": metadata.get("wing", "episodic") if metadata else "episodic",
+            },
             epistemic_confidence=0.5,
             verification_status="unverified",
             source_trust="observed",

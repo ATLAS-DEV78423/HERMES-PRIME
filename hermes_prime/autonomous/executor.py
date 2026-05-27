@@ -34,6 +34,7 @@ from requests.exceptions import ConnectionError, Timeout
 @dataclass
 class AutonomousExecutionResult:
     """Result of autonomous execution."""
+
     execution_id: str
     task_prompt: str
     trace_id: str
@@ -80,12 +81,20 @@ class AutonomousExecutor:
         self.learning_registry = learning_registry or (
             LearningRegistry(hermes_dir / "learned_patterns.json") if enable_learning else None
         )
-        self.prompt_augmenter = PromptAugmenter(self.learning_registry) if (enable_learning and self.learning_registry) else None
-        self.learning_engine = LearningEngine(
-            outcome_store=outcome_db,
-            registry=self.learning_registry,
-            memory_store=self.memory_store,
-        ) if (enable_learning and self.learning_registry) else None
+        self.prompt_augmenter = (
+            PromptAugmenter(self.learning_registry)
+            if (enable_learning and self.learning_registry)
+            else None
+        )
+        self.learning_engine = (
+            LearningEngine(
+                outcome_store=outcome_db,
+                registry=self.learning_registry,
+                memory_store=self.memory_store,
+            )
+            if (enable_learning and self.learning_registry)
+            else None
+        )
         self._execution_count = 0
 
     def execute(
@@ -191,9 +200,17 @@ class AutonomousExecutor:
                     error_message=str(e),
                     summary=f"Failed to parse LLM output: {e}",
                 )
-                self._record_outcome(task_prompt, "", "", False, False,
-                                      inference_attestation.latency_ms,
-                                      inference_attestation.tokens_used, model, utc_now_iso())
+                self._record_outcome(
+                    task_prompt,
+                    "",
+                    "",
+                    False,
+                    False,
+                    inference_attestation.latency_ms,
+                    inference_attestation.tokens_used,
+                    model,
+                    utc_now_iso(),
+                )
                 return result
 
             # Step 4: Mint capability for the action
@@ -246,8 +263,12 @@ class AutonomousExecutor:
                 inference_attestation=inference_attestation,
                 proposal=proposal,
                 sentinel_decision=evaluation.decision.to_dict(),
-                execution_status="success" if evaluation.decision.permitted else "proposal_rejected",
-                error_message=None if evaluation.decision.permitted else evaluation.decision.denial_reason,
+                execution_status="success"
+                if evaluation.decision.permitted
+                else "proposal_rejected",
+                error_message=None
+                if evaluation.decision.permitted
+                else evaluation.decision.denial_reason,
                 summary=f"Autonomous execution: {task_prompt} → {proposal.action_type.value} → {'APPROVED' if evaluation.decision.permitted else 'REJECTED'}",
             )
 
@@ -314,7 +335,11 @@ class AutonomousExecutor:
             self._record_outcome(task_prompt, "", "", False, False, 0, 0, model, utc_now_iso())
             return result
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)))
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+    )
     def _infer_with_retry(self, request: LLMRequest) -> LLMResponse:
         return self.llm_client.infer(request)
 

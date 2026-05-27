@@ -103,7 +103,9 @@ class PatternMiner:
     def __init__(self, catalog: FabricPatternCatalog) -> None:
         self.catalog = catalog
 
-    def match(self, classification: PatternClassification, limit: int = 5) -> list[FabricPatternMatch]:
+    def match(
+        self, classification: PatternClassification, limit: int = 5
+    ) -> list[FabricPatternMatch]:
         entries = self.catalog.entries()
         scored: list[tuple[float, FabricPatternCatalogEntry]] = []
         wanted = set(classification.recommended_pattern_tags + classification.task_types)

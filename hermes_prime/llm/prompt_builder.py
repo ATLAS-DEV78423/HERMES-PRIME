@@ -76,6 +76,8 @@ Respond with ONLY the JSON proposal. No preamble or commentary."""
             {"role": "system", "content": self.build_system_prompt()},
             {
                 "role": "user",
-                "content": self.build_user_prompt(task, file_context, recent_actions, learned_guidance),
+                "content": self.build_user_prompt(
+                    task, file_context, recent_actions, learned_guidance
+                ),
             },
         ]

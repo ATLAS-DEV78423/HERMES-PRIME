@@ -98,6 +98,7 @@ class TestMem0Backend(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_store_and_get(self):
@@ -160,7 +161,12 @@ class TestMem0Backend(unittest.TestCase):
         old = utc_now_iso()
         c1 = _make_claim(claim_text="Old claim", trust_state=TrustState.UNVERIFIED)
         import datetime as dt
-        c1.timestamp = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10)).isoformat().replace("+00:00", "Z")
+
+        c1.timestamp = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         c2 = _make_claim(claim_text="Fresh claim")
         self.backend.store(c1)
         self.backend.store(c2)

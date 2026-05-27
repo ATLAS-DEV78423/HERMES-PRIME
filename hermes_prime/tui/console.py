@@ -13,6 +13,7 @@ class HermesConsole:
         if use_rich:
             try:
                 from rich.console import Console
+
                 self._rich_console = Console()
             except ImportError:
                 self._rich_console = None
@@ -21,6 +22,7 @@ class HermesConsole:
     def print(self, text: str = "", style: str | None = None) -> None:
         if self._rich_console and style:
             from rich.text import Text
+
             self._rich_console.print(Text(text, style=style))
         else:
             print(text)
@@ -28,6 +30,7 @@ class HermesConsole:
     def print_logo(self) -> None:
         if self._rich_console:
             from rich.text import Text
+
             logo = Text(HERMES_PRIME_LOGO, style="bold cyan")
             self._rich_console.print(logo)
         else:
@@ -60,6 +63,7 @@ class HermesConsole:
         )
         if self._rich_console:
             from rich.text import Text
+
             for line in console.render().split("\n"):
                 styled = Text(line, style="bold cyan" if "HERMES-PRIME" in line else "grey62")
                 self._rich_console.print(styled)
@@ -85,6 +89,7 @@ class HermesConsole:
         )
         if self._rich_console:
             from rich.text import Text
+
             for line in telemetry.render().split("\n"):
                 styled = Text(line, style="bold cyan" if "HERMES-PRIME" in line else "grey62")
                 self._rich_console.print(styled)
@@ -118,6 +123,7 @@ class HermesConsole:
     def print_table(self, title: str, data: list[dict[str, Any]], columns: list[str]) -> None:
         if self._rich_console:
             from rich.table import Table
+
             table = Table(title=title, border_style="grey62")
             for col in columns:
                 table.add_column(col, style="cyan", header_style="bold white")

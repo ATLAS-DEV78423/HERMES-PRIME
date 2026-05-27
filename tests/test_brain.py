@@ -1,4 +1,5 @@
 """Tests for the neural brain network system."""
+
 from __future__ import annotations
 
 import os
@@ -7,8 +8,14 @@ import tempfile
 from pathlib import Path
 
 from hermes_prime.brain import (
-    NeuralGraph, BrainJournal, AutoLinker, BrainMaintenanceAgent,
-    NodeType, EdgeType, BrainNode, BrainEdge,
+    NeuralGraph,
+    BrainJournal,
+    AutoLinker,
+    BrainMaintenanceAgent,
+    NodeType,
+    EdgeType,
+    BrainNode,
+    BrainEdge,
 )
 from hermes_prime.utils import new_urn_uuid, utc_now_iso
 
@@ -17,8 +24,9 @@ def test_neural_graph_node_crud():
     with tempfile.TemporaryDirectory() as tmp:
         g = NeuralGraph(os.path.join(tmp, "brain.db"))
 
-        node = g.add_node(NodeType.OBSERVATION, "Test Node", "This is test content",
-                          tags=["test", "observation"])
+        node = g.add_node(
+            NodeType.OBSERVATION, "Test Node", "This is test content", tags=["test", "observation"]
+        )
         assert node.node_id is not None
         assert node.title == "Test Node"
         assert node.node_type == NodeType.OBSERVATION
@@ -75,9 +83,11 @@ def test_brain_journal():
         g = NeuralGraph(os.path.join(tmp, "brain.db"))
         journal = BrainJournal(g)
 
-        problem = journal.write_problem("Database connection fails",
-                                        "Cannot connect to SQLite on high load",
-                                        context="production deployment")
+        problem = journal.write_problem(
+            "Database connection fails",
+            "Cannot connect to SQLite on high load",
+            context="production deployment",
+        )
         assert problem.node_type == NodeType.PROBLEM
         assert problem.metadata.get("solved") is False
 
@@ -107,18 +117,17 @@ def test_brain_journal():
         unsolved = journal.get_problems_unsolved()
         assert len(unsolved) == 0
 
-        obs = journal.write_observation("System running smoothly",
-                                        "Everything works after pooling fix",
-                                        tags=["observations"])
+        obs = journal.write_observation(
+            "System running smoothly", "Everything works after pooling fix", tags=["observations"]
+        )
         assert obs.node_type == NodeType.OBSERVATION
 
-        pattern = journal.write_pattern("Pooling pattern",
-                                        "Always use connection pooling for SQLite",
-                                        confidence=0.9)
+        pattern = journal.write_pattern(
+            "Pooling pattern", "Always use connection pooling for SQLite", confidence=0.9
+        )
         assert pattern.node_type == NodeType.PATTERN
 
-        decision = journal.write_decision("Use WAL mode",
-                                          "WAL mode provides better concurrency")
+        decision = journal.write_decision("Use WAL mode", "WAL mode provides better concurrency")
         assert decision.node_type == NodeType.DECISION
 
         g.close()
@@ -130,12 +139,18 @@ def test_auto_linker():
         g = NeuralGraph(os.path.join(tmp, "brain.db"))
         linker = AutoLinker(g)
 
-        a = g.add_node(NodeType.TOPIC, "Python error handling",
-                       "How to handle exceptions in Python",
-                       tags=["python", "errors"])
-        b = g.add_node(NodeType.TOPIC, "Exception best practices",
-                        "Best practices for Python exception handling",
-                        tags=["python", "best-practices"])
+        a = g.add_node(
+            NodeType.TOPIC,
+            "Python error handling",
+            "How to handle exceptions in Python",
+            tags=["python", "errors"],
+        )
+        b = g.add_node(
+            NodeType.TOPIC,
+            "Exception best practices",
+            "Best practices for Python exception handling",
+            tags=["python", "best-practices"],
+        )
 
         links = linker.link_new_node(a.node_id)
         assert links > 0
@@ -162,22 +177,40 @@ def test_maintenance_agent():
         agent = BrainMaintenanceAgent(g, linker)
 
         import datetime as dt
-        old_ts = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=200)).isoformat().replace("+00:00", "Z")
 
-        stale1 = g.add_node(NodeType.OBSERVATION, "Old stale node",
-                            "This is very old and never accessed",
-                            confidence=0.1, tags=[])
-        stale2 = g.add_node(NodeType.OBSERVATION, "Another stale",
-                            "Also old and unimportant",
-                            confidence=0.15, tags=[])
+        old_ts = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=200))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+
+        stale1 = g.add_node(
+            NodeType.OBSERVATION,
+            "Old stale node",
+            "This is very old and never accessed",
+            confidence=0.1,
+            tags=[],
+        )
+        stale2 = g.add_node(
+            NodeType.OBSERVATION,
+            "Another stale",
+            "Also old and unimportant",
+            confidence=0.15,
+            tags=[],
+        )
 
         g._conn.execute(
             "UPDATE brain_nodes SET created_at = ?, access_count = 0 WHERE node_id IN (?, ?)",
             (old_ts, stale1.node_id, stale2.node_id),
         )
 
-        old_node = g.add_node(NodeType.TOPIC, "Important old topic",
-                              "Still relevant", confidence=0.8, tags=["important"])
+        old_node = g.add_node(
+            NodeType.TOPIC,
+            "Important old topic",
+            "Still relevant",
+            confidence=0.8,
+            tags=["important"],
+        )
         g._conn.execute(
             "UPDATE brain_nodes SET created_at = ?, access_count = 0 WHERE node_id = ?",
             (old_ts, old_node.node_id),
@@ -209,12 +242,18 @@ def test_obsidian_export():
         journal = BrainJournal(g)
         linker = AutoLinker(g)
 
-        a = g.add_node(NodeType.TOPIC, "Machine Learning",
-                       "Machine learning concepts and techniques",
-                       tags=["ml", "ai"])
-        b = g.add_node(NodeType.TOPIC, "Neural Networks",
-                       "Neural network architectures",
-                       tags=["ml", "deep-learning"])
+        a = g.add_node(
+            NodeType.TOPIC,
+            "Machine Learning",
+            "Machine learning concepts and techniques",
+            tags=["ml", "ai"],
+        )
+        b = g.add_node(
+            NodeType.TOPIC,
+            "Neural Networks",
+            "Neural network architectures",
+            tags=["ml", "deep-learning"],
+        )
         linker.link_new_node(a.node_id)
         linker.link_new_node(b.node_id)
 

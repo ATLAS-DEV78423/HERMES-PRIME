@@ -14,6 +14,7 @@ class SQLiteMemoryBackend(MemoryBackend):
         self.db_path = Path(db_path).resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         import sqlite3
+
         self.conn = sqlite3.connect(str(self.db_path))
         self.conn.row_factory = sqlite3.Row
         self._init_schema()
@@ -50,8 +51,10 @@ class SQLiteMemoryBackend(MemoryBackend):
         contradictions = json.dumps(claim.contradictions, sort_keys=True, ensure_ascii=True)
         payload = claim.to_dict()
         payload_json = json.dumps(payload, sort_keys=True, ensure_ascii=True)
-        state = claim.trust_state.value if hasattr(claim.trust_state, 'value') else claim.trust_state
-        tier = claim.tier.value if hasattr(claim.tier, 'value') else claim.tier
+        state = (
+            claim.trust_state.value if hasattr(claim.trust_state, "value") else claim.trust_state
+        )
+        tier = claim.tier.value if hasattr(claim.tier, "value") else claim.tier
         self.conn.execute(
             """
             INSERT INTO memory_claims(fact_id, payload, trust_state, tier, contradiction_payload, intent_root, created_at, updated_at)
@@ -86,10 +89,10 @@ class SQLiteMemoryBackend(MemoryBackend):
         return MemoryClaim(**data)
 
     def _build_fts_query(self, query: str) -> str:
-        cleaned = re.sub(r'["()+\-~^*]', '', query)
-        words = [w for w in cleaned.split() if w.upper() not in ('AND', 'OR', 'NOT', 'NEAR')]
+        cleaned = re.sub(r'["()+\-~^*]', "", query)
+        words = [w for w in cleaned.split() if w.upper() not in ("AND", "OR", "NOT", "NEAR")]
         terms = [f'"{w}"*' for w in words if w]
-        return ' AND '.join(terms)
+        return " AND ".join(terms)
 
     def search(self, query: str, limit: int = 10) -> list[MemorySearchResult]:
         try:
@@ -103,7 +106,10 @@ class SQLiteMemoryBackend(MemoryBackend):
                 ") LIMIT ?",
                 (fts_query, limit),
             ).fetchall()
-            return [MemorySearchResult.from_claim(MemoryClaim(**json.loads(row["payload"]))) for row in rows]
+            return [
+                MemorySearchResult.from_claim(MemoryClaim(**json.loads(row["payload"])))
+                for row in rows
+            ]
         except sqlite3.OperationalError:
             pass
         query_lower = query.lower()

@@ -18,6 +18,7 @@ pytestmark = pytest.mark.skipif(
 class TestMemPalaceBackend:
     def _make_backend(self):
         from hermes_prime.memory.backends.mempalace_backend import MemPalaceBackend
+
         db_dir = tempfile.mkdtemp(prefix="mempalace_test_")
         backend = MemPalaceBackend(palace_path=db_dir)
         return backend, db_dir
@@ -109,11 +110,14 @@ class TestMemPalaceBackend:
 
     def test_gc(self):
         from datetime import datetime, timedelta, timezone
+
         backend, tmp_dir = self._make_backend()
         try:
             claim = self._make_claim()
             backend.store(claim)
-            future = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat().replace("+00:00", "Z")
+            future = (
+                (datetime.now(timezone.utc) + timedelta(days=1)).isoformat().replace("+00:00", "Z")
+            )
             deleted = backend.gc(future)
             assert deleted == 1
             assert backend.count() == 0

@@ -30,7 +30,9 @@ class DummyLLM(LLMClient):
         self.last_request = request
         return LLMResponse(
             model=request.model,
-            message_content='{"action_type": "filesystem.read", "scope": "' + self.workspace_root.replace("\\", "/") + '/src", "capability": "cap:file-read:scoped", "parameters": {}}',
+            message_content='{"action_type": "filesystem.read", "scope": "'
+            + self.workspace_root.replace("\\", "/")
+            + '/src", "capability": "cap:file-read:scoped", "parameters": {}}',
             finish_reason="stop",
             tokens_used=10,
             latency_ms=1.0,
@@ -65,6 +67,7 @@ class DummyTrustStore:
 
 def _make_intent_root(scope: str = "/test"):
     from hermes_prime.signing import HMACSigner
+
     signer = HMACSigner(identity="test", secret=b"test-secret")
     from hermes_prime.utils import new_urn_uuid, utc_now_iso
     from hermes_prime.contracts import IntentRoot
@@ -88,7 +91,10 @@ class TestMemoryIntegration(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         self.db_path = self.tmp / "mem.db"
         self.backend = SQLiteMemoryBackend(self.db_path)
-        self.store = MemoryStore(backend=self.backend, depth_policy=DepthPolicy(max_claims_per_intent=10, max_total_claims=100))
+        self.store = MemoryStore(
+            backend=self.backend,
+            depth_policy=DepthPolicy(max_claims_per_intent=10, max_total_claims=100),
+        )
         self.intent = _make_intent_root(scope=str(self.tmp))
 
         # write a memory claim that should be recalled (must match recall substring search)
@@ -127,7 +133,9 @@ class TestMemoryIntegration(unittest.TestCase):
         llm.workspace_root = str(self.tmp)
 
         # run executor; it should recall the previous claim and include it in the user prompt
-        executor.execute(task_prompt="analysis: repository review and propose next step", model="mistral")
+        executor.execute(
+            task_prompt="analysis: repository review and propose next step", model="mistral"
+        )
 
         self.assertIsNotNone(llm.last_request)
         # user message should contain the recalled claim text

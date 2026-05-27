@@ -153,7 +153,9 @@ class TestContradictionDetector(unittest.TestCase):
 
     def test_detect_explicit(self):
         result = self.detector.detect_explicit(
-            _urn(99), [_urn(1), "nonexistent"], self.existing,
+            _urn(99),
+            [_urn(1), "nonexistent"],
+            self.existing,
         )
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["fact_id"], _urn(1))
@@ -189,6 +191,7 @@ class TestMemoryGovernor(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_review_no_contradiction(self):

@@ -55,12 +55,14 @@ class ContradictionDetector:
             sim = _jaccard_similarity(new_tokens, existing_tokens)
 
             if sim >= self.similarity_threshold:
-                contradictions.append({
-                    "fact_id": existing.fact_id,
-                    "reason": f"similar claim within same intent (similarity={sim:.2f})",
-                    "existing_claim": existing.claim,
-                    "similarity": sim,
-                })
+                contradictions.append(
+                    {
+                        "fact_id": existing.fact_id,
+                        "reason": f"similar claim within same intent (similarity={sim:.2f})",
+                        "existing_claim": existing.claim,
+                        "similarity": sim,
+                    }
+                )
 
         return contradictions
 
@@ -71,17 +73,17 @@ class ContradictionDetector:
         existing_claims: list[MemoryClaim],
     ) -> list[dict[str, Any]]:
         contradictions: list[dict[str, Any]] = []
-        existing_by_id: dict[str, MemoryClaim] = {
-            c.fact_id: c for c in existing_claims
-        }
+        existing_by_id: dict[str, MemoryClaim] = {c.fact_id: c for c in existing_claims}
         for target_id in explicit:
             if target_id in existing_by_id:
-                contradictions.append({
-                    "fact_id": target_id,
-                    "reason": "explicit contradiction declared",
-                    "existing_claim": existing_by_id[target_id].claim,
-                    "similarity": 0.0,
-                })
+                contradictions.append(
+                    {
+                        "fact_id": target_id,
+                        "reason": "explicit contradiction declared",
+                        "existing_claim": existing_by_id[target_id].claim,
+                        "similarity": 0.0,
+                    }
+                )
         return contradictions
 
 
@@ -126,7 +128,9 @@ class MemoryGovernor:
 
         if contradicts:
             explicit = self.detector.detect_explicit(
-                claim.fact_id, contradicts, existing_claims,
+                claim.fact_id,
+                contradicts,
+                existing_claims,
             )
             detected.extend(explicit)
 
@@ -169,12 +173,10 @@ class MemoryGovernor:
             )
 
         claim_a.contradictions = [
-            c for c in claim_a.contradictions
-            if c.get("fact_id") != fact_id_b
+            c for c in claim_a.contradictions if c.get("fact_id") != fact_id_b
         ]
         claim_b.contradictions = [
-            c for c in claim_b.contradictions
-            if c.get("fact_id") != fact_id_a
+            c for c in claim_b.contradictions if c.get("fact_id") != fact_id_a
         ]
 
         if resolution == "keep_a":
@@ -195,7 +197,8 @@ class MemoryGovernor:
         return MemoryStoreResult(success=True, fact_id=fact_id_a)
 
     def get_contradictions(
-        self, fact_id: str,
+        self,
+        fact_id: str,
     ) -> list[dict[str, Any]]:
         claim = self.memory_store.backend.get(fact_id)
         if claim is None:

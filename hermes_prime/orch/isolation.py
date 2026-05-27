@@ -22,9 +22,7 @@ class CapabilityScoper:
     ) -> CapabilityToken:
         scope = sub_scope or parent_token.scope
         if not scope.startswith(self._workspace_root):
-            raise ScopeViolation(
-                f"Scope {scope} is outside workspace root {self._workspace_root}"
-            )
+            raise ScopeViolation(f"Scope {scope} is outside workspace root {self._workspace_root}")
         if not scope.startswith(parent_token.scope):
             raise ScopeViolation(
                 f"Sub-agent scope {scope} exceeds parent scope {parent_token.scope}"
@@ -60,13 +58,10 @@ class CapabilityScoper:
         action_str = action.value if isinstance(action, ActionType) else action
         if action_str not in token.actions:
             raise ScopeViolation(
-                f"Action {action_str} not in token capabilities: "
-                f"{list(token.actions)}"
+                f"Action {action_str} not in token capabilities: {list(token.actions)}"
             )
         if not target_scope.startswith(token.scope):
-            raise ScopeViolation(
-                f"Target scope {target_scope} outside token scope {token.scope}"
-            )
+            raise ScopeViolation(f"Target scope {target_scope} outside token scope {token.scope}")
 
     def restrict_actions(
         self,

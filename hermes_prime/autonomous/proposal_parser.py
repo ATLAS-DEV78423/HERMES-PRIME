@@ -10,6 +10,7 @@ from hermes_prime.utils import new_urn_uuid, utc_now_iso
 
 class ProposalParsingError(Exception):
     """Raised when LLM output cannot be parsed as ActionProposal."""
+
     pass
 
 

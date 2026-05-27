@@ -216,12 +216,20 @@ class TrustStore:
     def store_memory_claim(self, claim: MemoryClaim) -> None:
         now = utc_now_iso()
         contradictions = _json(claim.contradictions)
-        claim_state = claim.trust_state if isinstance(claim.trust_state, TrustState) else TrustState(claim.trust_state)
+        claim_state = (
+            claim.trust_state
+            if isinstance(claim.trust_state, TrustState)
+            else TrustState(claim.trust_state)
+        )
         if claim.contradictions and claim_state in {TrustState.VALIDATED, TrustState.EXECUTABLE}:
             raise TrustStoreError("contradictory memory claims cannot be promoted")
         existing = self.get_memory_claim(claim.fact_id)
         if existing is not None:
-            current_state = existing.trust_state if isinstance(existing.trust_state, TrustState) else TrustState(existing.trust_state)
+            current_state = (
+                existing.trust_state
+                if isinstance(existing.trust_state, TrustState)
+                else TrustState(existing.trust_state)
+            )
             next_state = claim_state
             if not trust_transition_allowed(current_state, next_state):
                 raise TrustStoreError(
@@ -257,13 +265,21 @@ class TrustStore:
         claim = self.get_memory_claim(fact_id)
         if claim is None:
             raise TrustStoreError("memory claim not found")
-        current = claim.trust_state if isinstance(claim.trust_state, TrustState) else TrustState(claim.trust_state)
+        current = (
+            claim.trust_state
+            if isinstance(claim.trust_state, TrustState)
+            else TrustState(claim.trust_state)
+        )
         if not trust_transition_allowed(current, trust_state):
-            raise TrustStoreError(f"invalid trust transition {current.value} -> {trust_state.value}")
+            raise TrustStoreError(
+                f"invalid trust transition {current.value} -> {trust_state.value}"
+            )
         claim.trust_state = trust_state
         self.store_memory_claim(claim)
         return claim
 
     def list_memory_claims(self) -> list[MemoryClaim]:
-        rows = self.conn.execute("SELECT payload FROM memory_claims ORDER BY created_at ASC").fetchall()
+        rows = self.conn.execute(
+            "SELECT payload FROM memory_claims ORDER BY created_at ASC"
+        ).fetchall()
         return [MemoryClaim(**_load(row["payload"])) for row in rows]

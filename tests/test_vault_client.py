@@ -122,9 +122,7 @@ class TestVaultClientRead(unittest.TestCase):
         client = VaultClient()
         client._hvac_available = True
         client._client = MagicMock()
-        client._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {"data": {}}
-        }
+        client._client.secrets.kv.v2.read_secret_version.return_value = {"data": {"data": {}}}
         secret = client.read("empty/path", key="missing")
         self.assertIsNone(secret)
 
@@ -266,6 +264,7 @@ class TestVaultClientLazyInit(unittest.TestCase):
 
     def test_lazy_init_sets_hvac_available_on_success(self):
         import sys
+
         fake_hvac = MagicMock()
         fake_hvac.Client.return_value = MagicMock()
         with patch.dict("sys.modules", {"hvac": fake_hvac}):
@@ -276,6 +275,7 @@ class TestVaultClientLazyInit(unittest.TestCase):
 
     def test_lazy_init_sets_hvac_available_false_on_import_error(self):
         import builtins
+
         original_import = builtins.__import__
 
         def fake_import(name, *args, **kwargs):

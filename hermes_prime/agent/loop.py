@@ -29,6 +29,18 @@ class AgentLoop:
     def execute_tool(self, name: str, arguments: dict[str, Any]) -> str:
         return self.tool_registry.execute(name, **arguments)
 
+    def get_tool_schemas(self) -> list[dict[str, Any]]:
+        return self.tool_registry.tool_schemas()
+
+    def build_messages(self, prompt: str, context: AgentContext | None = None) -> list[dict[str, Any]]:
+        messages: list[dict[str, Any]] = []
+        if context and context.system_prompt:
+            messages.append({"role": "system", "content": context.system_prompt})
+        if context and context.messages:
+            messages.extend(context.messages)
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
     def run(self, prompt: str, context: AgentContext | None = None) -> AgentResult:
         ctx = context or AgentContext(workspace_root=self.workspace_root)
         from hermes_prime.utils import new_urn_uuid

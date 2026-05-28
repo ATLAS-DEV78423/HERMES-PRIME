@@ -24,11 +24,32 @@ class ToolRegistry:
         entry = self._tools.get(name)
         if entry is None:
             return None
-        _, desc = entry
+        fn, desc = entry
+        import inspect
+
+        sig = inspect.signature(fn)
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+        for param_name, param in sig.parameters.items():
+            param_type = "string"
+            if param.annotation is not inspect.Parameter.empty:
+                if param.annotation is int:
+                    param_type = "integer"
+                elif param.annotation is float:
+                    param_type = "number"
+                elif param.annotation is bool:
+                    param_type = "boolean"
+            properties[param_name] = {"type": param_type, "description": f"{param_name}"}
+            if param.default is inspect.Parameter.empty:
+                required.append(param_name)
         return {
             "name": name,
             "description": desc,
-            "parameters": {"type": "object", "properties": {}},
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+                "required": required,
+            },
         }
 
     def list_tools(self) -> list[str]:

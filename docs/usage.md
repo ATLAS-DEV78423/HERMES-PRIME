@@ -23,6 +23,12 @@ All commands work as **`hermes`**, **`hermes-prime`**, or **`sentinel`**.
 | `hermes graphify` | Knowledge graph build/query |
 | `hermes dashboard` | Textual live dashboard |
 | `hermes tui` | Terminal UI components |
+| `hermes repl` | Interactive governed REPL |
+| `hermes sessions` | Session management |
+| `hermes skills` | Skills hub (search, install, manage) |
+| `hermes cron` | Scheduled job management |
+| `hermes profile` | Multi-instance profile management |
+| `hermes gateway` | Multi-platform messaging gateway |
 
 Global flags (most commands):
 
@@ -275,6 +281,117 @@ hermes graphify import
 hermes dashboard          # Live Textual dashboard
 hermes tui logo           # Branding
 hermes tui boot           # Boot animation
+```
+
+---
+
+## Interactive REPL
+
+Start a governed interactive session with LLM-based conversation, tool calling, and persistent history:
+
+```bash
+hermes repl
+```
+
+Once inside the REPL:
+- Type any question or command — the LLM responds conversationally
+- Use tools automatically (web_search, web_fetch, terminal, todo)
+- `/clear` — reset conversation history
+- `/quit` or `/exit` — exit the REPL
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `--model` | LLM model to use (default: mistral) |
+
+---
+
+## Session management
+
+Persistent session store with FTS5 full-text search, source tagging, and JSONL export.
+
+```bash
+hermes sessions list                          # List all sessions
+hermes sessions list --source cli             # Filter by source
+hermes sessions list --limit 20               # Limit results
+hermes sessions search "deployment"           # Full-text search
+hermes sessions view <session-id>             # View messages
+hermes sessions rename <session-id> "new"     # Rename session
+hermes sessions delete <session-id>           # Delete session
+hermes sessions export --output sessions.jsonl  # Export as JSONL
+hermes sessions stats                         # Store statistics
+hermes sessions prune --older-than 30         # Prune old sessions
+```
+
+---
+
+## Skills hub
+
+Search, browse, inspect, install, and manage skills from upstream registries.
+
+```bash
+hermes skills list                            # List installed skills
+hermes skills search "code review"            # Search registries
+hermes skills browse --page 1                 # Browse all skills
+hermes skills inspect <identifier>            # Preview a skill
+hermes skills install <identifier>            # Install from hub
+hermes skills check                           # Check for updates
+hermes skills uninstall <name>                # Remove a skill
+```
+
+All skills operations are audited via Sentinel audit tracing.
+
+---
+
+## Cron scheduler
+
+Schedule recurring or one-shot tasks with duration, cron expression, or ISO timestamp formats.
+
+```bash
+hermes cron list                              # List scheduled jobs
+hermes cron list --all                        # Include disabled jobs
+hermes cron create \
+  --name "daily-backup" \
+  --schedule "0 3 * * *" \
+  --prompt "Run database backup" \
+  --model mistral \
+  --workdir /path/to/project
+hermes cron pause <job-id>                    # Pause a job
+hermes cron resume <job-id>                   # Resume a job
+hermes cron run <job-id>                      # Trigger immediately
+hermes cron remove <job-id>                   # Remove a job
+hermes cron status                            # Check scheduler status
+```
+
+Schedule format: `30m` (duration), `0 9 * * *` (cron), `2026-06-01T09:00:00Z` (ISO).
+
+---
+
+## Profile management
+
+Multi-instance support with fully isolated HERMES_HOME directories.
+
+```bash
+hermes profile list                           # List all profiles
+hermes profile create dev --description "Dev environment"
+hermes profile switch dev                     # Switch active profile
+hermes profile rename dev staging             # Rename a profile
+hermes profile delete dev                     # Delete a profile
+hermes profile active                         # Show active profile
+```
+
+Each profile has its own config, API keys, memory, sessions, and skills.
+
+---
+
+## Gateway
+
+Multi-platform messaging gateway (wraps upstream gateway system).
+
+```bash
+hermes gateway --platforms slack              # Start Slack gateway
+hermes gateway --platforms telegram,discord   # Multi-platform
 ```
 
 ---

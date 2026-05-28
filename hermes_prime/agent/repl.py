@@ -7,6 +7,8 @@ from hermes_prime.agent.loop import AgentLoop
 from hermes_prime.agent.session import SessionStore
 from hermes_prime.agent.types import AgentContext
 from hermes_prime.agent.governed_dispatch import GovernedToolDispatcher
+from hermes_prime.llm.client import LLMClient
+from hermes_prime.llm.ollama_adapter import OllamaClient
 
 
 class GovernedREPL:
@@ -17,14 +19,17 @@ class GovernedREPL:
         vault: Any = None,
         trust_store: Any = None,
         model: str = "mistral",
+        llm_client: LLMClient | None = None,
     ):
         self.workspace_root = str(Path(workspace_root).resolve())
         self.model = model
+        self.llm_client = llm_client or OllamaClient()
         self.agent_loop = AgentLoop(
             workspace_root=self.workspace_root,
             sentinel=sentinel,
             vault=vault,
             trust_store=trust_store,
+            llm_client=self.llm_client,
         )
         self.dispatcher = GovernedToolDispatcher(
             sentinel=sentinel,
@@ -36,6 +41,7 @@ class GovernedREPL:
             Path(self.workspace_root) / ".hermes-prime" / "sessions.db"
         )
         self._current_session_id: str | None = None
+        self._history: list[dict[str, Any]] = []
         self.register_tools()
 
     def register_tools(self) -> None:
@@ -68,6 +74,7 @@ class GovernedREPL:
             model=self.model,
             session_id=self._current_session_id,
             tool_registry=self.agent_loop.tool_registry,
+            messages=list(self._history),
         )
 
         result = self.agent_loop.run(message, context=ctx)
@@ -77,6 +84,8 @@ class GovernedREPL:
             self._current_session_id,
             {"role": "assistant", "content": response},
         )
+        self._history.append({"role": "user", "content": message})
+        self._history.append({"role": "assistant", "content": response})
 
         return response
 
@@ -84,7 +93,8 @@ class GovernedREPL:
         return self._current_session_id
 
     def run_interactive(self) -> None:
-        print("Hermes Prime REPL (type /quit to exit)")
+        import sys
+        print("\nHermes Prime REPL (type /quit to exit, /clear to reset)\n")
         while True:
             try:
                 user_input = input("> ")
@@ -92,11 +102,27 @@ class GovernedREPL:
                 print("\nGoodbye.")
                 break
             if user_input.lower() in ("/quit", "/exit", "/q"):
+                print("Goodbye.")
                 break
+            if user_input.lower() == "/clear":
+                self._history.clear()
+                self._current_session_id = None
+                print("Session reset.\n")
+                continue
             if not user_input.strip():
                 continue
-            response = self.process_message(user_input)
-            print(response)
+
+            if not self.llm_client.health_check():
+                print("LLM service is not available. Is Ollama running?\n")
+                continue
+
+            try:
+                response = self.process_message(user_input)
+                print(response)
+            except Exception as e:
+                print(f"Error: {e}")
+            finally:
+                sys.stdout.flush()
 
 
 __all__ = ["GovernedREPL"]

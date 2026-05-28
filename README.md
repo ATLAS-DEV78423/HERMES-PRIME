@@ -116,6 +116,60 @@ Start a governed interactive session with persistent history and tool access:
 hermes repl
 ```
 
+Session management:
+```bash
+hermes sessions list                    # List all sessions
+hermes sessions search "query"          # Search session content
+hermes sessions view <id>               # View messages in a session
+hermes sessions rename <id> "new name"  # Rename a session
+hermes sessions delete <id>             # Delete a session
+hermes sessions export --output out.jsonl  # Export sessions as JSONL
+hermes sessions stats                   # Show session store statistics
+hermes sessions prune --older-than 30   # Prune old sessions
+```
+
+### Skills Hub
+Search, install, and manage skills from upstream registries:
+```bash
+hermes skills list                      # List installed skills
+hermes skills search "code review"      # Search skill registries
+hermes skills browse                    # Browse all available skills
+hermes skills inspect <identifier>      # Preview a skill
+hermes skills install <identifier>      # Install a skill
+hermes skills check                     # Check for skill updates
+hermes skills uninstall <name>          # Remove a skill
+```
+
+### Cron Scheduler
+Schedule recurring or one-shot tasks:
+```bash
+hermes cron list                        # List scheduled jobs
+hermes cron create --name backup --schedule "0 3 * * *" --prompt "Run backup"
+hermes cron pause <id>                  # Pause a job
+hermes cron resume <id>                 # Resume a job
+hermes cron run <id>                    # Trigger a job immediately
+hermes cron remove <id>                 # Remove a job
+hermes cron status                      # Check scheduler status
+```
+
+### Profile Management
+Isolated multi-instance support:
+```bash
+hermes profile list                     # List all profiles
+hermes profile create dev               # Create a new profile
+hermes profile switch dev               # Switch active profile
+hermes profile rename dev prod          # Rename a profile
+hermes profile delete dev               # Delete a profile
+hermes profile active                   # Show active profile
+```
+
+### Gateway
+Multi-platform messaging gateway:
+```bash
+hermes gateway --platforms slack        # Start gateway for Slack
+hermes gateway --platforms telegram,discord  # Multi-platform
+```
+
 ### Prompt-Driven Execution
 For bounded autonomous execution driven by Fabric extraction:
 ```bash

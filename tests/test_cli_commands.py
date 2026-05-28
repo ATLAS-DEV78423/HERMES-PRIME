@@ -29,7 +29,8 @@ def test_unknown_cmd_falls_through():
 
     assert "setup" not in known_hp_commands
     assert "model" not in known_hp_commands
-    assert "cron" not in known_hp_commands
+    assert "plugins" not in known_hp_commands
+    assert "auth" not in known_hp_commands
 
 
 def test_hp_dashboard_subcommand_registered():
@@ -83,8 +84,6 @@ def test_known_hp_set_does_not_contain_upstream_commands():
     upstream_only = [
         "setup",
         "model",
-        "cron",
-        "profile",
         "plugins",
         "auth",
         "backup",

@@ -59,6 +59,9 @@ known_hp_commands = {
     "todo",
     "tools",
     "kanban",
+    "repl",
+    "cron",
+    "profile",
 }
 
 
@@ -377,16 +380,54 @@ def build_parser() -> argparse.ArgumentParser:
     skills_delete = skills_sub.add_parser("delete", help="Delete a skill")
     skills_delete.add_argument("name", help="Skill name")
 
+    # Skills hub commands (from upstream skills hub)
+    skills_search = skills_sub.add_parser("search", help="Search skill registries")
+    skills_search.add_argument("query", help="Search query")
+    skills_search.add_argument("--limit", type=int, default=20, help="Max results")
+
+    skills_browse = skills_sub.add_parser("browse", help="Browse all available skills (paginated)")
+    skills_browse.add_argument("--page", type=int, default=1, help="Page number")
+    skills_browse.add_argument("--source", default="all", help="Source filter")
+
+    skills_inspect = skills_sub.add_parser("inspect", help="Preview a skill without installing")
+    skills_inspect.add_argument("identifier", help="Skill identifier")
+
+    skills_install = skills_sub.add_parser("install", help="Install a skill from hub")
+    skills_install.add_argument("identifier", help="Skill identifier")
+
+    skills_check = skills_sub.add_parser("check", help="Check installed hub skills for updates")
+
+    skills_uninstall = skills_sub.add_parser("uninstall", help="Remove a hub-installed skill")
+    skills_uninstall.add_argument("name", help="Skill name to remove")
+
     sessions_parser = subparsers.add_parser("sessions", help="Browse and search sessions")
     sessions_sub = sessions_parser.add_subparsers(dest="sessions_command")
 
-    sessions_sub.add_parser("list", help="List all sessions")
+    sessions_list = sessions_sub.add_parser("list", help="List all sessions")
+    sessions_list.add_argument("--source", default=None, help="Filter by source (cli, telegram, etc.)")
+    sessions_list.add_argument("--limit", type=int, default=50, help="Max sessions to show")
 
     sessions_search = sessions_sub.add_parser("search", help="Search sessions")
     sessions_search.add_argument("query", help="Search query")
 
     sessions_view = sessions_sub.add_parser("view", help="View session messages")
     sessions_view.add_argument("session_id", help="Session ID")
+
+    sessions_rename = sessions_sub.add_parser("rename", help="Rename a session")
+    sessions_rename.add_argument("session_id", help="Session ID")
+    sessions_rename.add_argument("title", help="New title")
+
+    sessions_delete = sessions_sub.add_parser("delete", help="Delete a session")
+    sessions_delete.add_argument("session_id", help="Session ID")
+
+    sessions_export = sessions_sub.add_parser("export", help="Export session(s) as JSONL")
+    sessions_export.add_argument("--session-id", default=None, help="Single session to export")
+    sessions_export.add_argument("--output", default=None, help="Output file path")
+
+    sessions_sub.add_parser("stats", help="Show session store statistics")
+
+    sessions_prune = sessions_sub.add_parser("prune", help="Delete old sessions")
+    sessions_prune.add_argument("--older-than", type=int, default=30, help="Delete sessions older than N days")
 
     todo_parser = subparsers.add_parser("todo", help="Task planning and tracking")
     todo_sub = todo_parser.add_subparsers(dest="todo_command")
@@ -426,6 +467,66 @@ def build_parser() -> argparse.ArgumentParser:
     kanban_assign = kanban_sub.add_parser("assign", help="Assign a task")
     kanban_assign.add_argument("--task-id", required=True)
     kanban_assign.add_argument("--assignee", required=True)
+
+    # Phase 9: Cron scheduler
+    cron_parser = subparsers.add_parser("cron", help="Manage scheduled cron jobs")
+    cron_sub = cron_parser.add_subparsers(dest="cron_command")
+
+    cron_list = cron_sub.add_parser("list", help="List scheduled jobs")
+    cron_list.add_argument("--all", action="store_true", help="Include disabled jobs")
+
+    cron_create = cron_sub.add_parser("create", help="Create a scheduled job")
+    cron_create.add_argument("--name", required=True, help="Job name")
+    cron_create.add_argument("--schedule", required=True, help="Schedule (30m, 2h, cron expr, ISO timestamp)")
+    cron_create.add_argument("--prompt", required=True, help="Task prompt")
+    cron_create.add_argument("--model", default=None, help="Model override")
+    cron_create.add_argument("--provider", default=None, help="Provider override")
+    cron_create.add_argument("--skills", default=None, help="Comma-separated skills")
+    cron_create.add_argument("--workdir", default=None, help="Working directory")
+    cron_create.add_argument("--deliver", default=None, help="Comma-separated delivery platforms")
+
+    cron_edit = cron_sub.add_parser("edit", help="Edit a job")
+    cron_edit.add_argument("job_id", help="Job ID")
+
+    cron_pause = cron_sub.add_parser("pause", help="Pause a job")
+    cron_pause.add_argument("job_id", help="Job ID")
+
+    cron_resume = cron_sub.add_parser("resume", help="Resume a job")
+    cron_resume.add_argument("job_id", help="Job ID")
+
+    cron_run = cron_sub.add_parser("run", help="Trigger a job")
+    cron_run.add_argument("job_id", help="Job ID")
+
+    cron_remove = cron_sub.add_parser("remove", help="Remove a job")
+    cron_remove.add_argument("job_id", help="Job ID")
+
+    cron_sub.add_parser("status", help="Check scheduler status")
+
+    # Phase 10: Profile management
+    profile_parser = subparsers.add_parser("profile", help="Manage multi-instance profiles")
+    profile_sub = profile_parser.add_subparsers(dest="profile_command")
+
+    profile_sub.add_parser("list", help="List all profiles")
+
+    profile_create = profile_sub.add_parser("create", help="Create a new profile")
+    profile_create.add_argument("name", help="Profile name")
+    profile_create.add_argument("--description", default="", help="Profile description")
+
+    profile_switch = profile_sub.add_parser("switch", help="Switch to a profile")
+    profile_switch.add_argument("name", help="Profile name")
+
+    profile_rename = profile_sub.add_parser("rename", help="Rename a profile")
+    profile_rename.add_argument("old_name", help="Current name")
+    profile_rename.add_argument("new_name", help="New name")
+
+    profile_delete = profile_sub.add_parser("delete", help="Delete a profile")
+    profile_delete.add_argument("name", help="Profile name")
+
+    profile_sub.add_parser("active", help="Show active profile")
+
+    # Phase 11: REPL (interactive governed shell)
+    repl_parser = subparsers.add_parser("repl", help="Start interactive governed REPL")
+    repl_parser.add_argument("--model", default="mistral", help="LLM model name")
 
     return parser
 
@@ -478,8 +579,24 @@ def main(argv: list[str] | None = None) -> int:
 
     if argv is not None and "--prompt" not in argv and "--autonomous" not in argv:
         non_option_tokens = [token for token in argv if token and not token.startswith("-")]
-        if len(non_option_tokens) == 1 and non_option_tokens[0] not in known_hp_commands:
-            argv = list(argv) + ["--prompt", non_option_tokens[0]]
+        if len(non_option_tokens) == 1:
+            token = non_option_tokens[0]
+            if token not in known_hp_commands:
+                try:
+                    from hermes_cli.commands import resolve_command
+                    if resolve_command(token) is None:
+                        # Also check upstream CLI-level commands not in slash registry
+                        _upstream_cli_commands = {
+                            "setup", "version", "logs", "doctor", "memory",
+                            "auth", "logout", "dashboard", "debug", "plugins",
+                            "browser", "uninstall", "backup", "login", "completion",
+                            "computer-use", "honcho", "send", "mcp", "acp",
+                            "curator", "password", "profile", "bundles", "toolsets",
+                        }
+                        if token not in _upstream_cli_commands:
+                            argv = list(argv) + ["--prompt", token]
+                except ImportError:
+                    argv = list(argv) + ["--prompt", token]
     parser = build_parser()
     args, _ = parser.parse_known_args(argv)
     cmd = vars(args).get("command")
@@ -1693,9 +1810,11 @@ def main(argv: list[str] | None = None) -> int:
 
             if args.command == "skills":
                 from hermes_prime.agent.skills import SkillManager, SkillStore
+                from hermes_prime.skills_hub import SkillsManager
 
                 skill_store = SkillStore(workspace_path / ".hermes-prime" / "skills.json")
                 skill_mgr = SkillManager(skill_store)
+                hub_mgr = SkillsManager(workspace_root=workspace, sentinel=sentinel, trust_store=trust_store)
 
                 if args.skills_command == "list":
                     results = skill_mgr.skills_list(query=args.query)
@@ -1715,22 +1834,85 @@ def main(argv: list[str] | None = None) -> int:
                 elif args.skills_command == "delete":
                     print(skill_mgr.skill_manage(action="delete", name=args.name))
                     return 0
+                elif args.skills_command == "search":
+                    hub_results = hub_mgr.search(args.query, limit=getattr(args, "limit", 20))
+                    if not hub_results:
+                        print("No skills found.")
+                    elif isinstance(hub_results[0], dict) and "error" in hub_results[0]:
+                        print(f"Error: {hub_results[0].get('error', 'unknown')}")
+                    else:
+                        for r in hub_results:
+                            desc = r.get("description", "")[:80] if isinstance(r, dict) else str(r)[:80]
+                            print(f"  {r.get('name', '?')} ({r.get('source', '?')}) — {desc}")
+                    return 0
+                elif args.skills_command == "browse":
+                    hub_results = hub_mgr.browse(page=getattr(args, "page", 1), source=getattr(args, "source", "all"))
+                    if not hub_results:
+                        print("No skills found.")
+                    elif isinstance(hub_results[0], dict) and "error" in hub_results[0]:
+                        print(f"Error: {hub_results[0].get('error', 'unknown')}")
+                    else:
+                        for r in hub_results:
+                            desc = r.get("description", "")[:80] if isinstance(r, dict) else str(r)[:80]
+                            print(f"  {r.get('name', '?')} — {desc}")
+                    return 0
+                elif args.skills_command == "inspect":
+                    hub_result = hub_mgr.inspect(args.identifier)
+                    if isinstance(hub_result, dict):
+                        if "error" in hub_result:
+                            print(f"Error: {hub_result['error']}")
+                        elif "content" in hub_result:
+                            print(hub_result["content"][:2000])
+                        else:
+                            print(str(hub_result)[:2000])
+                    else:
+                        print(str(hub_result)[:2000])
+                    return 0
+                elif args.skills_command == "install":
+                    hub_result = hub_mgr.install(args.identifier)
+                    if isinstance(hub_result, dict) and "error" in hub_result:
+                        print(f"Error: {hub_result['error']}")
+                    else:
+                        ident = hub_result.get("identifier", args.identifier) if isinstance(hub_result, dict) else args.identifier
+                        print(f"Installed: {ident}")
+                    return 0
+                elif args.skills_command == "check":
+                    hub_updates = hub_mgr.check_updates()
+                    if not hub_updates:
+                        print("All skills up to date.")
+                    elif isinstance(hub_updates[0], dict) and "error" in hub_updates[0]:
+                        print(f"Error: {hub_updates[0].get('error', 'unknown')}")
+                    else:
+                        for r in hub_updates:
+                            name = r.get("name", "?") if isinstance(r, dict) else str(r)
+                            available = r.get("update_available", False) if isinstance(r, dict) else False
+                            print(f"  {name}: {'update available' if available else 'up to date'}")
+                    return 0
+                elif args.skills_command == "uninstall":
+                    hub_result = hub_mgr.uninstall(args.name)
+                    if isinstance(hub_result, dict) and "error" in hub_result:
+                        print(f"Error: {hub_result['error']}")
+                    else:
+                        print(f"Skill '{args.name}' uninstalled.")
+                    return 0
                 else:
                     parser.error("unknown skills command")
                 return 0
 
             if args.command == "sessions":
-                from hermes_prime.agent.session import SessionStore
+                from hermes_prime.sessions import SessionManager
 
-                session_store = SessionStore(workspace_path / ".hermes-prime" / "sessions.db")
+                session_store = SessionManager(workspace_path / ".hermes-prime" / "sessions.db")
 
                 if args.sessions_command == "list":
-                    sessions = session_store.list_sessions()
+                    source = getattr(args, "source", None)
+                    limit = getattr(args, "limit", 50)
+                    sessions = session_store.list_sessions(source=source, limit=limit)
                     if not sessions:
                         print("No sessions found.")
                     else:
                         for s in sessions:
-                            print(f"  {s['id'][:16]}... {s['title']} ({s['message_count']} msgs)")
+                            print(f"  {s['id'][:16]}... {s['title']} ({s['message_count']} msgs, {s.get('source', 'cli')})")
                     return 0
                 elif args.sessions_command == "search":
                     results = session_store.search(args.query)
@@ -1747,6 +1929,40 @@ def main(argv: list[str] | None = None) -> int:
                     else:
                         for m in msgs:
                             print(f"[{m['role']}] {m['content'][:200]}")
+                    return 0
+                elif args.sessions_command == "rename":
+                    if session_store.rename_session(args.session_id, args.title):
+                        print(f"Session {args.session_id[:16]}... renamed to '{args.title}'.")
+                    else:
+                        print("Session not found.")
+                    return 0
+                elif args.sessions_command == "delete":
+                    if session_store.delete_session(args.session_id):
+                        print(f"Session {args.session_id[:16]}... deleted.")
+                    else:
+                        print("Session not found.")
+                    return 0
+                elif args.sessions_command == "export":
+                    result = session_store.export_jsonl(
+                        session_id=getattr(args, "session_id", None),
+                        out_path=args.output,
+                    )
+                    if args.output:
+                        print(f"Sessions exported to {args.output}")
+                    else:
+                        print(result)
+                    return 0
+                elif args.sessions_command == "stats":
+                    stats = session_store.stats()
+                    print(f"Sessions: {stats['sessions']}")
+                    print(f"Messages: {stats['messages']}")
+                    print(f"Total tokens: {stats['total_tokens']}")
+                    for s in stats.get("sources", []):
+                        print(f"  Source '{s['source']}': {s['c']} sessions")
+                    return 0
+                elif args.sessions_command == "prune":
+                    count = session_store.prune_sessions(older_than_days=args.older_than)
+                    print(f"Pruned {count} session(s) older than {args.older_than} days.")
                     return 0
                 else:
                     parser.error("unknown sessions command")
@@ -1841,6 +2057,134 @@ def main(argv: list[str] | None = None) -> int:
                     return 0
                 else:
                     parser.error("unknown kanban command")
+                return 0
+
+            # Phase 9: Cron jobs
+            if args.command == "cron":
+                from hermes_prime.cron_jobs import CronManager
+
+                cron_mgr = CronManager(
+                    workspace_root=workspace,
+                    sentinel=sentinel,
+                    trust_store=trust_store,
+                )
+
+                if args.cron_command == "list":
+                    jobs = cron_mgr.list_jobs(include_disabled=getattr(args, "all", False))
+                    if not jobs or (len(jobs) == 1 and "error" in jobs[0]):
+                        print("No scheduled jobs.")
+                    else:
+                        for j in jobs:
+                            state = j.get("state", "?")
+                            print(f"  [{state}] {j['id'][:16]}... {j['name']} ({j.get('schedule_display', '?')})")
+                    return 0
+                elif args.cron_command == "create":
+                    skills = args.skills.split(",") if args.skills else None
+                    deliver = args.deliver.split(",") if args.deliver else None
+                    cron_result = cron_mgr.create_job(
+                        name=args.name,
+                        schedule=args.schedule,
+                        prompt=args.prompt,
+                        model=args.model,
+                        provider=args.provider,
+                        skills=skills,
+                        workdir=args.workdir,
+                        deliver=deliver,
+                    )
+                    if "error" in cron_result:
+                        print(f"Error: {cron_result['error']}")
+                    else:
+                        print(f"Cron job created: {cron_result['id']}")
+                    return 0
+                elif args.cron_command == "pause":
+                    cron_result = cron_mgr.pause_job(args.job_id)
+                    print(f"Job {args.job_id[:16]}... paused." if "error" not in cron_result else f"Error: {cron_result['error']}")
+                    return 0
+                elif args.cron_command == "resume":
+                    cron_result = cron_mgr.resume_job(args.job_id)
+                    print(f"Job {args.job_id[:16]}... resumed." if "error" not in cron_result else f"Error: {cron_result['error']}")
+                    return 0
+                elif args.cron_command == "run":
+                    cron_result = cron_mgr.run_job(args.job_id)
+                    print(f"Job {args.job_id[:16]}... triggered." if "error" not in cron_result else f"Error: {cron_result['error']}")
+                    return 0
+                elif args.cron_command == "remove":
+                    cron_result = cron_mgr.remove_job(args.job_id)
+                    print(f"Job {args.job_id[:16]}... removed." if "error" not in cron_result else f"Error: {cron_result['error']}")
+                    return 0
+                elif args.cron_command == "status":
+                    cron_result = cron_mgr.scheduler_status()
+                    if isinstance(cron_result, dict):
+                        for k, v in cron_result.items():
+                            print(f"  {k}: {v}")
+                    return 0
+                else:
+                    parser.error("unknown cron command")
+                return 0
+
+            # Phase 10: Profile management
+            if args.command == "profile":
+                from hermes_prime.profiles import ProfileManager
+
+                profile_mgr = ProfileManager()
+
+                if args.profile_command == "list":
+                    prof_list = profile_mgr.list_profiles()
+                    if not prof_list:
+                        print("No profiles found. Create one with 'hermes profile create <name>'")
+                    else:
+                        for p in prof_list:
+                            print(f"  {p['name']}: {p['description'] or '(no description)'}")
+                    return 0
+                elif args.profile_command == "create":
+                    prof_result = profile_mgr.create_profile(args.name, args.description)
+                    if "error" in prof_result:
+                        print(f"Error: {prof_result['error']}")
+                    else:
+                        print(f"Profile '{args.name}' created at {prof_result['path']}")
+                    return 0
+                elif args.profile_command == "switch":
+                    prof_result = profile_mgr.switch_to(args.name)
+                    if "error" in prof_result:
+                        print(f"Error: {prof_result['error']}")
+                    else:
+                        print(f"Switched to profile '{args.name}'. HERMES_HOME={prof_result['hermes_home']}")
+                    return 0
+                elif args.profile_command == "rename":
+                    prof_result = profile_mgr.rename_profile(args.old_name, args.new_name)
+                    if "error" in prof_result:
+                        print(f"Error: {prof_result['error']}")
+                    else:
+                        print(f"Profile renamed: {args.old_name} -> {args.new_name}")
+                    return 0
+                elif args.profile_command == "delete":
+                    prof_result = profile_mgr.delete_profile(args.name)
+                    if "error" in prof_result:
+                        print(f"Error: {prof_result['error']}")
+                    else:
+                        print(f"Profile '{args.name}' deleted.")
+                    return 0
+                elif args.profile_command == "active":
+                    active = profile_mgr.get_active()
+                    print(f"Active profile: {active['name']}")
+                    print(f"HERMES_HOME: {active['hermes_home']}")
+                    return 0
+                else:
+                    parser.error("unknown profile command")
+                return 0
+
+            # Phase 11: REPL
+            if args.command == "repl":
+                from hermes_prime.agent.repl import GovernedREPL
+
+                repl = GovernedREPL(
+                    workspace_root=workspace,
+                    sentinel=sentinel,
+                    vault=vault,
+                    trust_store=trust_store,
+                    model=args.model,
+                )
+                repl.run_interactive()
                 return 0
 
             if args.prompt is None:

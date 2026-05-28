@@ -5,11 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- Documentation: superpowers integration plans and design specs (interactive agent, unified CLI, full agent integration)
-- Obsidian graphify custom integration module
-- Architecture diagram (`docs/architecture.md`) — Mermaid-based system architecture and data flow
-- Knowledge graph generation (`scripts/generate_graphify_graph.py`) — auto-extracts 4330 nodes / 1933 edges
-- Knowledge graph data (`graphify-out/graph.json`) — full codebase structure as extractable graph
+- **Interactive REPL** (`hermes repl`) — working governed REPL with LLM-based conversation, tool calling, session persistence, and `/clear`/`/quit` commands
+- **Session management** (`hermes sessions list|search|view|rename|delete|export|stats|prune`) — enhanced SQLite-backed session store with FTS5 search, JSONL export, and source filtering
+- **Skills hub** (`hermes skills search|browse|inspect|install|check|uninstall`) — wrap upstream skills hub with Sentinel audit tracing
+- **Cron scheduler** (`hermes cron list|create|pause|resume|run|remove|status`) — governed cron job management wrapping upstream cron system
+- **Profile management** (`hermes profile list|create|switch|rename|delete|active`) — multi-instance profile support with isolated HERMES_HOME
+- **Gateway scaffold** (`hermes gateway --platforms`) — multi-platform messaging gateway wrapper
+- **`--prompt` injection fix** — now checks upstream command registry before hijacking tokens as AI prompts (unblocks `hermes setup`, `hermes version`, `hermes config`, etc.)
+- Documentation: comprehensive subsystem documentation in README and docs/usage.md
 
 ### Fixed
 - Type annotation fix in `miners/ast_miner/miner.py` — `names` list now properly typed as `list[str | None]`

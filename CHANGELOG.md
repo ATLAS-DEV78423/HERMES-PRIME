@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Documentation: superpowers integration plans and design specs (interactive agent, unified CLI, full agent integration)
 - Obsidian graphify custom integration module
+- Architecture diagram (`docs/architecture.md`) — Mermaid-based system architecture and data flow
+- Knowledge graph generation (`scripts/generate_graphify_graph.py`) — auto-extracts 4330 nodes / 1933 edges
+- Knowledge graph data (`graphify-out/graph.json`) — full codebase structure as extractable graph
 
 ### Fixed
 - Type annotation fix in `miners/ast_miner/miner.py` — `names` list now properly typed as `list[str | None]`

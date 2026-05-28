@@ -32,6 +32,10 @@ infrastructure/policy_engine/compiled/
 # Standalone nested projects
 obsidian_graphify_custom/
 
+# Graphify generated artifacts (keep graph.json, exclude vault/embeddings)
+graphify-out/vault/
+graphify-out/embeddings/
+
 # Virtual environments
 venv/
 .venv/

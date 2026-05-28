@@ -35,6 +35,12 @@ Deep design docs live under [`hermes/`](../hermes/):
 - [Schema Registry](../hermes/SCHEMA_REGISTRY.md)
 - [Threat Model](../hermes/THREAT_MODEL.md)
 
+### Visual architecture
+
+- [Architecture Diagram](architecture.md) — Mermaid system architecture and data flow
+- [`graphify-out/graph.json`](../graphify-out/graph.json) — Auto-generated knowledge graph (4330 nodes, 1933 edges)
+- [`scripts/generate_graphify_graph.py`](../scripts/generate_graphify_graph.py) — Knowledge graph generator
+
 ## Project links
 
 - [GitHub Repository](https://github.com/ATLAS-DEV78423/HERMES-PRIME)

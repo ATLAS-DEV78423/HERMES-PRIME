@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from hermes_prime.agent.identity import AgentIdentity
 from hermes_prime.agent.loop import AgentLoop
 from hermes_prime.agent.session import SessionStore
 from hermes_prime.agent.types import AgentContext
@@ -20,10 +21,16 @@ class GovernedREPL:
         trust_store: Any = None,
         model: str = "mistral",
         llm_client: LLMClient | None = None,
+        memory_store: Any = None,
     ):
         self.workspace_root = str(Path(workspace_root).resolve())
         self.model = model
         self.llm_client = llm_client or OllamaClient()
+        self.memory_store = memory_store
+        self.identity = AgentIdentity(
+            workspace_root=self.workspace_root,
+            memory_store=memory_store,
+        )
         self.agent_loop = AgentLoop(
             workspace_root=self.workspace_root,
             sentinel=sentinel,
@@ -54,6 +61,29 @@ class GovernedREPL:
         self.agent_loop.register_tool("terminal", terminal_execute, "Execute a shell command")
         self.agent_loop.register_tool("todo", TodoManager().format_plan, "Show task plan")
 
+        self.agent_loop.register_tool(
+            "subagent",
+            self._subagent_tool,
+            "Delegate a subtask to a subagent. Pass a clear prompt describing the subtask.",
+        )
+
+    def _subagent_tool(self, prompt: str, model: str | None = None) -> str:
+        """Tool wrapper: spawn a subagent and return its summary."""
+        from hermes_prime.agent.subagent import SubagentManager
+
+        mgr = SubagentManager(
+            llm_client=self.llm_client,
+            workspace_root=self.workspace_root,
+        )
+        try:
+            task = mgr.spawn(prompt, model=model or self.model)
+            completed = mgr.get_result(task.id, timeout=120)
+            if completed and completed.result:
+                return completed.result.summary
+            return f"Subagent failed: {task.error or 'timeout'}"
+        finally:
+            mgr.shutdown()
+
     def process_message(self, message: str, session_id: str | None = None) -> str:
         if session_id:
             self._current_session_id = session_id
@@ -71,6 +101,7 @@ class GovernedREPL:
 
         ctx = AgentContext(
             workspace_root=self.workspace_root,
+            system_prompt=self.identity.build_system_prompt(),
             model=self.model,
             session_id=self._current_session_id,
             tool_registry=self.agent_loop.tool_registry,

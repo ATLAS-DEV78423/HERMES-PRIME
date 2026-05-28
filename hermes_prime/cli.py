@@ -662,6 +662,38 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             return upstream_main.main()
 
+    def _resolve_llm(args: argparse.Namespace) -> tuple[Any, str]:
+        """Return (llm_client, resolved_model) using config file, env, and auto-detection."""
+        from hermes_prime.config import load_config
+        from hermes_prime.llm.discovery import auto_detect_client, get_model_from_config
+
+        config = load_config(workspace)
+        if args.model != "mistral":
+            config["model"] = args.model
+        client = auto_detect_client(config)
+        model = get_model_from_config(config)
+        if client is None:
+            available = []
+            try:
+                from hermes_prime.llm.ollama_adapter import OllamaClient
+                o = OllamaClient()
+                if o.health_check():
+                    available.append("Ollama")
+            except Exception:
+                pass
+            try:
+                from hermes_prime.llm.vllm_adapter import VLLMClient
+                v = VLLMClient()
+                if v.health_check():
+                    available.append("vLLM")
+            except Exception:
+                pass
+            hint = f" (detected: {', '.join(available)})" if available else ""
+            print(
+                f"No LLM provider available. Install Ollama (ollama.ai) or start an OpenAI-compatible server.{hint}"
+            )
+        return client, model
+
     def handle_hp_command(args: argparse.Namespace) -> int:
         try:
             if args.command == "hp-doctor":
@@ -1633,12 +1665,10 @@ def main(argv: list[str] | None = None) -> int:
             # Phase 1: run command (autonomous execution)
             if args.command == "run":
                 try:
-                    from hermes_prime.llm.ollama_adapter import OllamaClient
                     from hermes_prime.autonomous.executor import AutonomousExecutor
 
-                    client = OllamaClient()
-                    if not client.health_check():
-                        print("Ollama is not running. Start it with: ollama serve")
+                    client, model = _resolve_llm(args)
+                    if client is None:
                         return 1
 
                     executor = AutonomousExecutor(
@@ -1651,7 +1681,7 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     result = executor.execute(
                         task_prompt=args.task,
-                        model=args.model,
+                        model=model,
                         scope=args.scope,
                     )
 
@@ -2177,12 +2207,15 @@ def main(argv: list[str] | None = None) -> int:
             if args.command == "repl":
                 from hermes_prime.agent.repl import GovernedREPL
 
+                client, model = _resolve_llm(args)
+
                 repl = GovernedREPL(
                     workspace_root=workspace,
                     sentinel=sentinel,
                     vault=vault,
                     trust_store=trust_store,
-                    model=args.model,
+                    model=model,
+                    llm_client=client,
                 )
                 repl.run_interactive()
                 return 0
@@ -2193,12 +2226,10 @@ def main(argv: list[str] | None = None) -> int:
             if args.autonomous:
                 # Autonomous path with LLM
                 try:
-                    from hermes_prime.llm.ollama_adapter import OllamaClient
                     from hermes_prime.autonomous.executor import AutonomousExecutor
 
-                    client = OllamaClient()
-                    if not client.health_check():
-                        print("Ollama is not running. Start it with: ollama serve")
+                    client, model = _resolve_llm(args)
+                    if client is None:
                         return 1
 
                     executor = AutonomousExecutor(
@@ -2210,7 +2241,7 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     result = executor.execute(
                         task_prompt=args.prompt,
-                        model=args.model,
+                        model=model,
                     )
 
                     if args.json:

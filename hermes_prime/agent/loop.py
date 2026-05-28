@@ -67,7 +67,15 @@ class AgentLoop:
         return "\n".join(lines)
 
     def build_messages(self, prompt: str, context: AgentContext | None = None) -> list[dict[str, Any]]:
-        system_prompt = _SYSTEM_PROMPT.format(tool_schemas=self._tool_schemas_text())
+        base = _SYSTEM_PROMPT.format(tool_schemas=self._tool_schemas_text())
+        if context and context.system_prompt:
+            system_prompt = context.system_prompt
+            if "{tool_schemas}" in system_prompt:
+                system_prompt = system_prompt.format(tool_schemas=self._tool_schemas_text())
+            else:
+                system_prompt = f"{system_prompt}\n\nAvailable tools:\n{self._tool_schemas_text()}"
+        else:
+            system_prompt = base
         messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
         if context and context.messages:
             messages.extend(context.messages)

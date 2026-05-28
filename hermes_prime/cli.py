@@ -54,6 +54,10 @@ known_hp_commands = {
     "hp-memory",
     "chat",
     "gateway",
+    "skills",
+    "sessions",
+    "todo",
+    "tools",
 }
 
 
@@ -351,6 +355,56 @@ def build_parser() -> argparse.ArgumentParser:
         default="slack",
         help="Comma-separated platform list (slack, discord, telegram)",
     )
+
+    # Agent CLI commands
+    skills_parser = subparsers.add_parser("skills", help="Manage agent skills")
+    skills_sub = skills_parser.add_subparsers(dest="skills_command")
+
+    skills_list = skills_sub.add_parser("list", help="List all skills")
+    skills_list.add_argument("--query", default=None, help="Search query")
+
+    skills_view = skills_sub.add_parser("view", help="View a skill")
+    skills_view.add_argument("name", help="Skill name")
+
+    skills_create = skills_sub.add_parser("create", help="Create a new skill")
+    skills_create.add_argument("--name", required=True, help="Skill name")
+    skills_create.add_argument("--content", required=True, help="Skill content/code")
+    skills_create.add_argument("--language", default="python", help="Language")
+    skills_create.add_argument("--description", default="", help="Description")
+    skills_create.add_argument("--tags", default=None, help="Comma-separated tags")
+
+    skills_delete = skills_sub.add_parser("delete", help="Delete a skill")
+    skills_delete.add_argument("name", help="Skill name")
+
+    sessions_parser = subparsers.add_parser("sessions", help="Browse and search sessions")
+    sessions_sub = sessions_parser.add_subparsers(dest="sessions_command")
+
+    sessions_sub.add_parser("list", help="List all sessions")
+
+    sessions_search = sessions_sub.add_parser("search", help="Search sessions")
+    sessions_search.add_argument("query", help="Search query")
+
+    sessions_view = sessions_sub.add_parser("view", help="View session messages")
+    sessions_view.add_argument("session_id", help="Session ID")
+
+    todo_parser = subparsers.add_parser("todo", help="Task planning and tracking")
+    todo_sub = todo_parser.add_subparsers(dest="todo_command")
+
+    todo_create = todo_sub.add_parser("create", help="Create a task")
+    todo_create.add_argument("--title", required=True, help="Task title")
+    todo_create.add_argument("--priority", default="medium", choices=["high", "medium", "low"])
+    todo_create.add_argument("--subtasks", default=None, help="Comma-separated subtasks")
+
+    todo_sub.add_parser("list", help="List all tasks")
+
+    todo_complete = todo_sub.add_parser("complete", help="Mark task done")
+    todo_complete.add_argument("--task-id", required=True, help="Task ID")
+
+    todo_remove = todo_sub.add_parser("remove", help="Remove a task")
+    todo_remove.add_argument("--task-id", required=True, help="Task ID")
+
+    tools_parser = subparsers.add_parser("tools", help="List available agent tools")
+    tools_parser.add_argument("--search", default=None, help="Search for tools")
 
     return parser
 
@@ -1615,6 +1669,121 @@ def main(argv: list[str] | None = None) -> int:
                 return run_governed_gateway(
                     platforms=args.platforms.split(","),
                 )
+
+            if args.command == "skills":
+                from hermes_prime.agent.skills import SkillManager, SkillStore
+
+                skill_store = SkillStore(workspace_path / ".hermes-prime" / "skills.json")
+                skill_mgr = SkillManager(skill_store)
+
+                if args.skills_command == "list":
+                    results = skill_mgr.skills_list(query=args.query)
+                    print(results)
+                    return 0
+                elif args.skills_command == "view":
+                    print(skill_mgr.skill_view(args.name))
+                    return 0
+                elif args.skills_command == "create":
+                    tags = [t.strip() for t in args.tags.split(",")] if args.tags else []
+                    result = skill_mgr.skill_manage(
+                        action="create", name=args.name, content=args.content,
+                        language=args.language, description=args.description, tags=tags,
+                    )
+                    print(result)
+                    return 0
+                elif args.skills_command == "delete":
+                    print(skill_mgr.skill_manage(action="delete", name=args.name))
+                    return 0
+                else:
+                    parser.error("unknown skills command")
+                return 0
+
+            if args.command == "sessions":
+                from hermes_prime.agent.session import SessionStore
+
+                session_store = SessionStore(workspace_path / ".hermes-prime" / "sessions.db")
+
+                if args.sessions_command == "list":
+                    sessions = session_store.list_sessions()
+                    if not sessions:
+                        print("No sessions found.")
+                    else:
+                        for s in sessions:
+                            print(f"  {s['id'][:16]}... {s['title']} ({s['message_count']} msgs)")
+                    return 0
+                elif args.sessions_command == "search":
+                    results = session_store.search(args.query)
+                    if not results:
+                        print(f"No sessions matching '{args.query}'")
+                    else:
+                        for r in results:
+                            print(f"  {r['id'][:16]}... {r['title']} ({r['message_count']} msgs)")
+                    return 0
+                elif args.sessions_command == "view":
+                    msgs = session_store.get_messages(args.session_id)
+                    if not msgs:
+                        print("No messages in this session.")
+                    else:
+                        for m in msgs:
+                            print(f"[{m['role']}] {m['content'][:200]}")
+                    return 0
+                else:
+                    parser.error("unknown sessions command")
+                return 0
+
+            if args.command == "todo":
+                from hermes_prime.agent.tools.todo import TodoManager
+
+                todo_mgr = TodoManager()
+
+                if args.todo_command == "create":
+                    subtasks = [s.strip() for s in args.subtasks.split(",")] if args.subtasks else []
+                    task = todo_mgr.create(args.title, subtasks=subtasks, priority=args.priority)
+                    print(f"Task created: {task['id'][:16]}...")
+                    return 0
+                elif args.todo_command == "list":
+                    print(todo_mgr.format_plan())
+                    return 0
+                elif args.todo_command == "complete":
+                    if todo_mgr.complete(args.task_id):
+                        print(f"Task {args.task_id[:16]}... completed.")
+                    else:
+                        print(f"Task {args.task_id[:16]}... not found.")
+                    return 0
+                elif args.todo_command == "remove":
+                    if todo_mgr.remove(args.task_id):
+                        print(f"Task {args.task_id[:16]}... removed.")
+                    else:
+                        print(f"Task {args.task_id[:16]}... not found.")
+                    return 0
+                else:
+                    parser.error("unknown todo command")
+                return 0
+
+            if args.command == "tools":
+                from hermes_prime.agent.tool_registry import ToolRegistry
+                from hermes_prime.agent.tools.web_search import web_search, web_fetch
+                from hermes_prime.agent.tools.terminal import terminal_execute
+                from hermes_prime.agent.tools.todo import TodoManager
+
+                registry = ToolRegistry()
+                registry.register("web_search", web_search, "Search the web")
+                registry.register("web_fetch", web_fetch, "Fetch a URL")
+                registry.register("terminal", terminal_execute, "Execute shell commands")
+                registry.register("todo", TodoManager().format_plan, "Task planning")
+
+                tools = registry.list_tools()
+                if args.search:
+                    tools = [t for t in tools if args.search.lower() in t.lower()]
+                if args.json:
+                    _emit({"tools": tools, "count": len(tools)}, True)
+                else:
+                    print(f"Available tools ({len(tools)}):")
+                    for t in sorted(tools):
+                        schema = registry.get_schema(t)
+                        desc = schema["description"] if schema else ""
+                        print(f"  - {t}: {desc[:60]}")
+                return 0
 
             if args.prompt is None:
                 parser.error("prompt is required when no subcommand is provided")

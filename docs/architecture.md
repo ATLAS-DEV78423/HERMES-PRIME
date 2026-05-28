@@ -19,6 +19,10 @@ graph TB
         Tools["tools"]
         Skills["skills"]
         REPL["repl"]
+        Sessions["sessions"]
+        Cron["cron"]
+        Profile["profile"]
+        Gateway["gateway"]
         Dashboard["hp-dashboard"]
         TUI["tui"]
     end
@@ -92,6 +96,9 @@ graph TB
         MemoryDB["memory.db<br/>claims & facts"]
         KanbanDB["kanban.db"]
         SkillsDB["skills.db"]
+        SessionsDB["sessions.db<br/>FTS5 search"]
+        CronDB["cron.db"]
+        ProfilesDir["profiles/<br/>config per profile"]
         GraphData["graph.json"]
     end
 
@@ -110,6 +117,10 @@ graph TB
     Parser --> Tools
     Parser --> Skills
     Parser --> REPL
+    Parser --> Sessions
+    Parser --> Cron
+    Parser --> Profile
+    Parser --> Gateway
     Parser --> Dashboard
     Parser --> TUI
 
@@ -166,6 +177,10 @@ graph TB
     TrustStore --> TrustDB
     KanbanBoard --> KanbanDB
     SkillsSystem --> SkillsDB
+    Sessions --> SessionsDB
+    Cron --> CronDB
+    Profile --> ProfilesDir
+    Gateway --> Gateway
 
     VaultClient --> CapVault
     HMACSigner --> TrustStore

@@ -84,7 +84,6 @@ def test_known_hp_set_does_not_contain_upstream_commands():
         "setup",
         "model",
         "cron",
-        "kanban",
         "profile",
         "plugins",
         "auth",

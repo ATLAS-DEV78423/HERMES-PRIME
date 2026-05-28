@@ -58,6 +58,7 @@ known_hp_commands = {
     "sessions",
     "todo",
     "tools",
+    "kanban",
 }
 
 
@@ -405,6 +406,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     tools_parser = subparsers.add_parser("tools", help="List available agent tools")
     tools_parser.add_argument("--search", default=None, help="Search for tools")
+
+    kanban_parser = subparsers.add_parser("kanban", help="Multi-agent kanban board")
+    kanban_sub = kanban_parser.add_subparsers(dest="kanban_command")
+
+    kanban_create = kanban_sub.add_parser("create", help="Create a task")
+    kanban_create.add_argument("--title", required=True)
+    kanban_create.add_argument("--description", default="")
+    kanban_create.add_argument("--priority", default="medium", choices=["high", "medium", "low"])
+    kanban_create.add_argument("--assignee", default=None)
+
+    kanban_sub.add_parser("list", help="List all tasks")
+    kanban_sub.add_parser("board", help="Show kanban board view")
+
+    kanban_transition = kanban_sub.add_parser("transition", help="Change task status")
+    kanban_transition.add_argument("--task-id", required=True)
+    kanban_transition.add_argument("--status", required=True, choices=["todo", "in_progress", "done", "blocked"])
+
+    kanban_assign = kanban_sub.add_parser("assign", help="Assign a task")
+    kanban_assign.add_argument("--task-id", required=True)
+    kanban_assign.add_argument("--assignee", required=True)
 
     return parser
 
@@ -1783,6 +1804,43 @@ def main(argv: list[str] | None = None) -> int:
                         schema = registry.get_schema(t)
                         desc = schema["description"] if schema else ""
                         print(f"  - {t}: {desc[:60]}")
+                return 0
+
+            if args.command == "kanban":
+                from hermes_prime.agent.kanban import KanbanBoard
+
+                board = KanbanBoard(workspace_path / ".hermes-prime" / "kanban.db")
+
+                if args.kanban_command == "create":
+                    task = board.create(
+                        title=args.title,
+                        description=args.description,
+                        priority=args.priority,
+                        assignee=args.assignee,
+                    )
+                    print(f"Task created: {task['id'][:16]}...")
+                    return 0
+                elif args.kanban_command == "list":
+                    tasks = board.list_all()
+                    if not tasks:
+                        print("No tasks.")
+                    else:
+                        for t in tasks:
+                            print(f"  [{t['status']}] {t['title']} ({t['priority']})")
+                    return 0
+                elif args.kanban_command == "board":
+                    print(board.format_board())
+                    return 0
+                elif args.kanban_command == "transition":
+                    board.transition(args.task_id, args.status)
+                    print(f"Task {args.task_id[:16]}... -> {args.status}")
+                    return 0
+                elif args.kanban_command == "assign":
+                    board.assign(args.task_id, args.assignee)
+                    print(f"Task {args.task_id[:16]}... assigned to {args.assignee}")
+                    return 0
+                else:
+                    parser.error("unknown kanban command")
                 return 0
 
             if args.prompt is None:

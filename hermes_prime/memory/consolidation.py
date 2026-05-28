@@ -43,11 +43,12 @@ class ReflectiveConsolidator:
         source_claims = [c for c in all_claims if c.intent_root == request.intent_root.intent_root]
 
         if request.source_fact_ids is not None:
-            source_claims = [c for c in source_claims if c.fact_id in request.source_fact_ids]
+            source_ids_set: list[str] = request.source_fact_ids
+            source_claims = [c for c in source_claims if c.fact_id in source_ids_set]
             source_claims.sort(
                 key=lambda c: (
-                    request.source_fact_ids.index(c.fact_id)
-                    if c.fact_id in request.source_fact_ids
+                    source_ids_set.index(c.fact_id)
+                    if c.fact_id in source_ids_set
                     else 0
                 ),
             )

@@ -56,4 +56,9 @@ class ToolRegistry:
         return list(self._tools.keys())
 
     def tool_schemas(self) -> list[dict[str, Any]]:
-        return [self.get_schema(name) for name in self._tools]
+        result: list[dict[str, Any]] = []
+        for name in self._tools:
+            schema = self.get_schema(name)
+            if schema is not None:
+                result.append(schema)
+        return result

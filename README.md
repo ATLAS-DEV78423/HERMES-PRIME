@@ -110,11 +110,46 @@ hermes-prime patch --intent-root <urn:uuid:...> --token-id <urn:uuid:...> --path
 hermes-prime replay --trace-id <urn:uuid:...>
 ```
 
+### Interactive REPL
+Start a governed interactive session with persistent history and tool access:
+```bash
+hermes repl
+```
+
 ### Prompt-Driven Execution
 For bounded autonomous execution driven by Fabric extraction:
 ```bash
 hermes-prime --prompt "read sample"
 ```
+
+## Agent Tools
+
+Hermes Prime provides a sandboxed tool system for agent execution:
+
+| Tool | Description |
+|------|-------------|
+| `terminal` | Governed shell execution with command allowlisting |
+| `code_exec` | Isolated Python code execution with stdout/stderr capture |
+| `web_search` | Governed web search with configurable result limits |
+| `web_fetch` | URL content fetching with markdown/text/html output |
+| `voice` | Text-to-speech and speech-to-text via system audio |
+| `vision` | Image capture and processing (webcam, screen, file) |
+| `todo` | Persistent task management with create/update/list/delete |
+
+All tools pass through Sentinel policy evaluation before execution.
+
+## Memory & Learning
+
+The memory fabric provides tiered storage with consolidation:
+
+- **Working memory**: short-term scratchpad (24h TTL)
+- **Episodic memory**: observed events (90d TTL)  
+- **Reflective memory**: post-task consolidation (30d TTL)
+- **Semantic memory**: extracted facts (permanent)
+- **Strategic memory**: compressed learnings (permanent)
+- **Governance memory**: policies and trust rules (immutable)
+
+Memory claims are cryptographically signed with HMAC provenance and consolidated via `ReflectiveConsolidator`.
 
 ## Documentation
 

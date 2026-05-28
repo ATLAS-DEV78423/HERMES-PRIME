@@ -25,8 +25,6 @@ def create_sentinel(workspace: Path) -> Any:
 def create_vault(workspace: Path) -> Any:
     from infrastructure.vault.capabilities import CapabilityVault
 
-    from hermes_prime.infrastructure_setup import create_trust_store
-
     trust_store = create_trust_store(workspace)
     return CapabilityVault(trust_store=trust_store)
 

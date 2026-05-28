@@ -371,7 +371,7 @@ class AstMiner:
                 if module_node is None:
                     continue
                 module = source[module_node.start_byte : module_node.end_byte].strip()
-                names = []
+                names: list[str | None] = []
                 for child in getattr(node, "named_children", []) or []:
                     if child.type in {"dotted_name", "identifier", "aliased_import"}:
                         text = source[child.start_byte : child.end_byte].strip()

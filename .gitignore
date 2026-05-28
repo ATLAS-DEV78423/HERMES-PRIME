@@ -29,6 +29,9 @@ infrastructure/policy_engine/compiled/
 # Debug artifacts
 *.debug
 
+# Standalone nested projects
+obsidian_graphify_custom/
+
 # Virtual environments
 venv/
 .venv/

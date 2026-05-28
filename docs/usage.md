@@ -234,6 +234,28 @@ hermes agents spawn --task "analyze src/" --scope ./src --parent <agent-id>
 hermes agents kill --agent-id <urn:uuid:...>
 ```
 
+### Governance hooks
+Sentinel policy evaluation is automatically applied to agent actions, cron jobs, tool execution, and skills:
+
+```bash
+# Cron governance
+hermes cron list
+hermes cron add --schedule "0 0 * * *" --task "daily-health-check"
+
+# Tool governance
+hermes tools list
+hermes tools execute --name terminal --args '{"command": "ls"}'
+```
+
+### Kanban multi-agent board
+Coordinate multiple agents through a shared kanban board:
+
+```bash
+hermes kanban list
+hermes kanban add --column backlog --title "Implement feature X" --description "..."
+hermes kanban move --card-id <id> --column in-progress
+```
+
 ---
 
 ## Graphify knowledge graph

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import time
 from unittest.mock import MagicMock, patch
 
@@ -56,7 +57,7 @@ class TestRateLimiterStats:
 
     def test_effective_rpm(self):
         stats = RateLimiterStats(total_acquired=10, started_at=time.monotonic() - 60)
-        assert stats.effective_rpm == 10.0
+        assert stats.effective_rpm == pytest.approx(10.0, abs=0.01)
 
     def test_effective_rpm_before_one_second(self):
         stats = RateLimiterStats(total_acquired=1)

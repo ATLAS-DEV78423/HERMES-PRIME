@@ -153,8 +153,11 @@ class FileMiner:
         budget: FileMinerBudget,
         start: float,
     ) -> tuple[list[dict[str, Any]], list[ExaminedFile]]:
+        rg_path = shutil.which("rg")
+        if not rg_path:
+            raise RuntimeError("rg (ripgrep) not found on PATH after availability check")
         proc = subprocess.run(
-            ["rg", "-n", "--no-heading", pattern, str(root)],
+            [rg_path, "-n", "--no-heading", pattern, str(root)],
             capture_output=True,
             text=True,
             timeout=budget.timeout_seconds,

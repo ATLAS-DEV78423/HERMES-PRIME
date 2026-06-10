@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from hermes_prime.agent.types import AgentContext, ToolCall
 
 
-def test_agent_context_defaults():
-    ctx = AgentContext(workspace_root="/tmp/test")
-    assert ctx.workspace_root == "/tmp/test"
+def test_agent_context_defaults(tmp_path: Path):
+    ctx = AgentContext(workspace_root=str(tmp_path))
+    assert ctx.workspace_root == str(tmp_path)
     assert ctx.max_iterations == 50
     assert ctx.tool_registry is not None
 

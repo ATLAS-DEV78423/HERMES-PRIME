@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
 from typing import Any
 
 
@@ -10,7 +12,7 @@ def text_to_speech(text: str, voice: str = "en-US-JennyNeural") -> str:
         import asyncio
 
         async def _tts() -> str:
-            output_file = "/tmp/hermes_tts.mp3"
+            output_file = str(Path(tempfile.gettempdir()) / "hermes_tts.mp3")
             communicate = edge_tts.Communicate(text, voice)
             await communicate.save(output_file)
             return f"Speech saved to {output_file}"

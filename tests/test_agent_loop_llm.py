@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -7,13 +8,14 @@ import pytest
 from hermes_prime.llm.client import LLMRequest, LLMResponse
 
 
-def test_agent_loop_with_system_prompt():
+def test_agent_loop_with_system_prompt(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
     from hermes_prime.agent.types import AgentContext
 
-    loop = AgentLoop(workspace_root="/tmp/test")
+    root = str(tmp_path)
+    loop = AgentLoop(workspace_root=root)
     ctx = AgentContext(
-        workspace_root="/tmp/test",
+        workspace_root=root,
         system_prompt="You are a helpful assistant.",
     )
     result = loop.run("say hello", context=ctx)
@@ -21,10 +23,10 @@ def test_agent_loop_with_system_prompt():
     assert result.session_id is not None
 
 
-def test_agent_loop_tool_injection():
+def test_agent_loop_tool_injection(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
 
-    loop = AgentLoop(workspace_root="/tmp/test")
+    loop = AgentLoop(workspace_root=str(tmp_path))
 
     def search_tool(query: str) -> str:
         return f"results for {query}"
@@ -34,10 +36,10 @@ def test_agent_loop_tool_injection():
     assert "results for hello" in result
 
 
-def test_agent_loop_tool_schemas():
+def test_agent_loop_tool_schemas(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
 
-    loop = AgentLoop(workspace_root="/tmp/test")
+    loop = AgentLoop(workspace_root=str(tmp_path))
 
     def search_tool(query: str) -> str:
         return f"results for {query}"
@@ -50,10 +52,11 @@ def test_agent_loop_tool_schemas():
     assert schemas[0]["parameters"]["properties"]["query"]["type"] == "string"
 
 
-def test_agent_loop_run_with_mock_llm_no_tool_call():
+def test_agent_loop_run_with_mock_llm_no_tool_call(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
     from hermes_prime.agent.types import AgentContext
 
+    root = str(tmp_path)
     mock_client = MagicMock()
     mock_client.health_check.return_value = True
     mock_client.infer.return_value = LLMResponse(
@@ -64,8 +67,8 @@ def test_agent_loop_run_with_mock_llm_no_tool_call():
         latency_ms=100,
     )
 
-    loop = AgentLoop(workspace_root="/tmp/test", llm_client=mock_client)
-    ctx = AgentContext(workspace_root="/tmp/test", model="mistral")
+    loop = AgentLoop(workspace_root=root, llm_client=mock_client)
+    ctx = AgentContext(workspace_root=root, model="mistral")
     result = loop.run("say hello", context=ctx)
 
     assert result.success
@@ -74,13 +77,13 @@ def test_agent_loop_run_with_mock_llm_no_tool_call():
     mock_client.infer.assert_called_once()
 
 
-def test_agent_loop_run_with_mock_llm_tool_call():
+def test_agent_loop_run_with_mock_llm_tool_call(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
     from hermes_prime.agent.types import AgentContext
 
+    root = str(tmp_path)
     mock_client = MagicMock()
     mock_client.health_check.return_value = True
-    # First response: tool call, Second response: final
     mock_client.infer.side_effect = [
         LLMResponse(
             model="mistral",
@@ -98,9 +101,9 @@ def test_agent_loop_run_with_mock_llm_tool_call():
         ),
     ]
 
-    loop = AgentLoop(workspace_root="/tmp/test", llm_client=mock_client)
+    loop = AgentLoop(workspace_root=root, llm_client=mock_client)
     loop.register_tool("web_search", lambda query: f"result for {query}", "Search the web")
-    ctx = AgentContext(workspace_root="/tmp/test", model="mistral")
+    ctx = AgentContext(workspace_root=root, model="mistral")
     result = loop.run("search for hello", context=ctx)
 
     assert result.success
@@ -110,21 +113,21 @@ def test_agent_loop_run_with_mock_llm_tool_call():
     assert mock_client.infer.call_count == 2
 
 
-def test_agent_loop_run_health_check_fails():
+def test_agent_loop_run_health_check_fails(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
     from hermes_prime.agent.types import AgentContext
 
     mock_client = MagicMock()
     mock_client.health_check.return_value = False
 
-    loop = AgentLoop(workspace_root="/tmp/test", llm_client=mock_client)
+    loop = AgentLoop(workspace_root=str(tmp_path), llm_client=mock_client)
     result = loop.run("hello")
 
     assert not result.success
     assert "not available" in result.summary.lower()
 
 
-def test_agent_loop_run_inference_error():
+def test_agent_loop_run_inference_error(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
     from hermes_prime.agent.types import AgentContext
 
@@ -132,17 +135,18 @@ def test_agent_loop_run_inference_error():
     mock_client.health_check.return_value = True
     mock_client.infer.side_effect = RuntimeError("connection refused")
 
-    loop = AgentLoop(workspace_root="/tmp/test", llm_client=mock_client)
+    loop = AgentLoop(workspace_root=str(tmp_path), llm_client=mock_client)
     result = loop.run("hello")
 
     assert not result.success
     assert "connection refused" in result.summary.lower()
 
 
-def test_agent_loop_run_max_iterations():
+def test_agent_loop_run_max_iterations(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
     from hermes_prime.agent.types import AgentContext
 
+    root = str(tmp_path)
     mock_client = MagicMock()
     mock_client.health_check.return_value = True
     mock_client.infer.return_value = LLMResponse(
@@ -153,9 +157,9 @@ def test_agent_loop_run_max_iterations():
         latency_ms=50,
     )
 
-    loop = AgentLoop(workspace_root="/tmp/test", llm_client=mock_client)
+    loop = AgentLoop(workspace_root=root, llm_client=mock_client)
     loop.register_tool("web_search", lambda query: "result", "Search")
-    ctx = AgentContext(workspace_root="/tmp/test", model="mistral", max_iterations=3)
+    ctx = AgentContext(workspace_root=root, model="mistral", max_iterations=3)
     result = loop.run("keep searching", context=ctx)
 
     assert not result.success
@@ -163,13 +167,13 @@ def test_agent_loop_run_max_iterations():
     assert len(result.tool_calls) == 3
 
 
-def test_agent_loop_run_tool_parsing_error():
+def test_agent_loop_run_tool_parsing_error(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
     from hermes_prime.agent.types import AgentContext
 
+    root = str(tmp_path)
     mock_client = MagicMock()
     mock_client.health_check.return_value = True
-    # Regex matches because "tool" key exists, but JSON has trailing comma — json.loads fails
     mock_client.infer.side_effect = [
         LLMResponse(
             model="mistral",
@@ -187,21 +191,21 @@ def test_agent_loop_run_tool_parsing_error():
         ),
     ]
 
-    loop = AgentLoop(workspace_root="/tmp/test", llm_client=mock_client)
-    ctx = AgentContext(workspace_root="/tmp/test", model="mistral")
+    loop = AgentLoop(workspace_root=root, llm_client=mock_client)
+    ctx = AgentContext(workspace_root=root, model="mistral")
     result = loop.run("do something", context=ctx)
 
     assert result.success
     assert result.summary == "I'll answer directly."
 
 
-def test_build_messages():
+def test_build_messages(tmp_path: Path):
     from hermes_prime.agent.loop import AgentLoop
     from hermes_prime.agent.types import AgentContext
 
     loop = AgentLoop()
     ctx = AgentContext(
-        workspace_root="/tmp/test",
+        workspace_root=str(tmp_path),
         system_prompt="You are helpful.",
         messages=[{"role": "user", "content": "previous message"}],
     )

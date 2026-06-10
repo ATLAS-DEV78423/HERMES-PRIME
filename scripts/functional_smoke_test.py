@@ -250,7 +250,7 @@ def main() -> int:
 
     out = io.StringIO()
     with redirect_stdout(out):
-        code = cli_main(["--workspace", str(ROOT), "--json", "doctor"])
+        code = cli_main(["--workspace", str(ROOT), "--json", "hp-doctor"])
     try:
         doctor = json.loads(out.getvalue())
         results.append(_check("CLI doctor", code == 0 and "checks" in doctor))

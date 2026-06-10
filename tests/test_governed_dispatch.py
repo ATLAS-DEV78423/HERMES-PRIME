@@ -1,4 +1,4 @@
-import uuid
+from pathlib import Path
 
 import pytest
 
@@ -59,13 +59,13 @@ class MockVault:
         )
 
 
-def test_governed_dispatch_permits():
+def test_governed_dispatch_permits(tmp_path: Path):
     sentinel = MockSentinel()
     vault = MockVault()
     dispatcher = GovernedToolDispatcher(
         sentinel=sentinel,
         vault=vault,
-        workspace_root="/tmp/test",
+        workspace_root=str(tmp_path),
     )
 
     def sample_tool(query: str) -> str:
@@ -75,7 +75,7 @@ def test_governed_dispatch_permits():
     assert result == "searched: hello"
 
 
-def test_governed_dispatch_denies():
+def test_governed_dispatch_denies(tmp_path: Path):
     class DenyingSentinel:
         def evaluate(self, proposal, capability=None):
             return type("EvalResult", (), {
@@ -99,7 +99,7 @@ def test_governed_dispatch_denies():
     dispatcher = GovernedToolDispatcher(
         sentinel=sentinel,
         vault=vault,
-        workspace_root="/tmp/test",
+        workspace_root=str(tmp_path),
     )
 
     def sample_tool(query: str) -> str:
@@ -109,11 +109,11 @@ def test_governed_dispatch_denies():
     assert "rejected by Sentinel" in result
 
 
-def test_tool_action_mapping():
+def test_tool_action_mapping(tmp_path: Path):
     dispatcher = GovernedToolDispatcher(
         sentinel=MockSentinel(),
         vault=MockVault(),
-        workspace_root="/tmp/test",
+        workspace_root=str(tmp_path),
     )
 
     assert dispatcher._map_tool_to_action("web_search") == ActionType.FILESYSTEM_READ

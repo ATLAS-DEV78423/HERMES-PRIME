@@ -5,25 +5,31 @@ from pathlib import Path
 import pytest
 
 
-def test_repl_constructs():
+def test_repl_constructs(tmp_path: Path):
     from hermes_prime.agent.repl import GovernedREPL
 
-    repl = GovernedREPL(workspace_root="/tmp/test")
-    assert repl.workspace_root == str(Path("/tmp/test").resolve())
+    root = tmp_path / "workspace"
+    root.mkdir()
+    repl = GovernedREPL(workspace_root=str(root))
+    assert repl.workspace_root == str(root.resolve())
 
 
-def test_repl_process_message():
+def test_repl_process_message(tmp_path: Path):
     from hermes_prime.agent.repl import GovernedREPL
 
-    repl = GovernedREPL(workspace_root="/tmp/test")
+    root = tmp_path / "workspace"
+    root.mkdir()
+    repl = GovernedREPL(workspace_root=str(root))
     response = repl.process_message("hello", "test-session")
     assert response is not None
 
 
-def test_repl_register_tools():
+def test_repl_register_tools(tmp_path: Path):
     from hermes_prime.agent.repl import GovernedREPL
 
-    repl = GovernedREPL(workspace_root="/tmp/test")
+    root = tmp_path / "workspace"
+    root.mkdir()
+    repl = GovernedREPL(workspace_root=str(root))
     repl.register_tools()
     tools = repl.agent_loop.tool_registry.list_tools()
     assert "web_search" in tools

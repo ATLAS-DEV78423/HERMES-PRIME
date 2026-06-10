@@ -108,16 +108,16 @@ class TestPromptBuilder(unittest.TestCase):
 
     def test_build_user_prompt_with_recent_actions(self):
         actions = [
-            {"action_type": "filesystem.read", "scope": "/tmp/a"},
-            {"action_type": "filesystem.write", "scope": "/tmp/b"},
+            {"action_type": "filesystem.read", "scope": "scope_a"},
+            {"action_type": "filesystem.write", "scope": "scope_b"},
         ]
         prompt = self.builder.build_user_prompt(
             task="task",
             recent_actions=actions,
         )
         self.assertIn("Recent approved actions:", prompt)
-        self.assertIn("filesystem.read: /tmp/a", prompt)
-        self.assertIn("filesystem.write: /tmp/b", prompt)
+        self.assertIn("filesystem.read: scope_a", prompt)
+        self.assertIn("filesystem.write: scope_b", prompt)
 
     def test_build_user_prompt_recent_actions_limited_to_3(self):
         actions = [{"action_type": f"type{i}", "scope": f"/s{i}"} for i in range(10)]

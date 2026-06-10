@@ -24,7 +24,11 @@ def _signal_handler(signum: int, _frame: FrameType | None) -> None:
 
 def install_signal_handlers() -> None:
     signal.signal(signal.SIGINT, _signal_handler)
-    signal.signal(signal.SIGTERM, _signal_handler)
+    if hasattr(signal, "SIGTERM"):
+        try:
+            signal.signal(signal.SIGTERM, _signal_handler)
+        except ValueError:
+            pass
 
 
 def safe_main(main_fn: Callable[[], int]) -> int:

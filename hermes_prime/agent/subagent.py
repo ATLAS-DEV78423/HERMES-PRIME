@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field

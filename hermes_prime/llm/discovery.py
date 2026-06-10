@@ -4,6 +4,8 @@ from collections.abc import Callable
 from typing import Any
 
 from .client import LLMClient
+from .rate_limiter import RateLimitConfig
+from .rate_limited_client import RateLimitedClient
 
 _ProviderFactory = Callable[[dict[str, Any]], LLMClient | None]
 
@@ -32,6 +34,15 @@ def auto_detect_client(config: dict[str, Any] | None = None) -> LLMClient | None
     for factory in chain:
         client = factory(cfg)
         if client and client.health_check():
+            rate_cfg = cfg.get("rate_limit", {})
+            if rate_cfg.get("enabled", False):
+                config = RateLimitConfig(
+                    enabled=True,
+                    requests_per_minute=float(rate_cfg.get("requests_per_minute", 30)),
+                    burst_size=int(rate_cfg.get("burst_size", 5)),
+                    concurrency_limit=int(rate_cfg.get("concurrency_limit", 3)),
+                )
+                client = RateLimitedClient(client, config=config)
             return client
     return None
 

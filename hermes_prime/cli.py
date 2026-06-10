@@ -62,6 +62,7 @@ known_hp_commands = {
     "repl",
     "cron",
     "profile",
+    "rate-limit",
 }
 
 
@@ -395,7 +396,7 @@ def build_parser() -> argparse.ArgumentParser:
     skills_install = skills_sub.add_parser("install", help="Install a skill from hub")
     skills_install.add_argument("identifier", help="Skill identifier")
 
-    skills_check = skills_sub.add_parser("check", help="Check installed hub skills for updates")
+    skills_sub.add_parser("check", help="Check installed hub skills for updates")
 
     skills_uninstall = skills_sub.add_parser("uninstall", help="Remove a hub-installed skill")
     skills_uninstall.add_argument("name", help="Skill name to remove")
@@ -527,6 +528,21 @@ def build_parser() -> argparse.ArgumentParser:
     # Phase 11: REPL (interactive governed shell)
     repl_parser = subparsers.add_parser("repl", help="Start interactive governed REPL")
     repl_parser.add_argument("--model", default="mistral", help="LLM model name")
+
+    # Phase 12: Rate limit management
+    rl_parser = subparsers.add_parser("rate-limit", help="Manage LLM API rate limiting")
+    rl_sub = rl_parser.add_subparsers(dest="rl_command")
+
+    rl_sub.add_parser("status", help="Show rate limiter status and statistics")
+
+    rl_sub.add_parser("reset", help="Reset rate limiter statistics")
+
+    rl_enable = rl_sub.add_parser("enable", help="Enable rate limiting")
+    rl_enable.add_argument("--rpm", type=float, default=30.0, help="Requests per minute")
+    rl_enable.add_argument("--burst", type=int, default=5, help="Burst size")
+    rl_enable.add_argument("--concurrency", type=int, default=3, help="Max concurrent requests")
+
+    rl_sub.add_parser("disable", help="Disable rate limiting")
 
     return parser
 
@@ -2201,6 +2217,60 @@ def main(argv: list[str] | None = None) -> int:
                     return 0
                 else:
                     parser.error("unknown profile command")
+                return 0
+
+            # Phase 12: Rate limit management
+            if args.command == "rate-limit":
+                from hermes_prime.config import load_config, save_config
+
+                cfg = load_config(workspace)
+                rate_cfg = cfg.get("rate_limit", {})
+                if args.rl_command == "status":
+                    client, _ = _resolve_llm(args)
+                    if hasattr(client, "limiter"):
+                        rl = client.limiter
+                        print("Rate Limiter Status")
+                        print(f"{'=' * 60}")
+                        print(f"Enabled: {rl.is_limited}")
+                        print(f"Requests/min: {rl.config.requests_per_minute}")
+                        print(f"Burst: {rl.config.burst_size}")
+                        print(f"Concurrency limit: {rl.config.concurrency_limit}")
+                        print(f"Acquired: {rl.stats.total_acquired}")
+                        print(f"Denied: {rl.stats.total_denied}")
+                        print(f"Effective RPM: {rl.stats.effective_rpm:.1f}")
+                    else:
+                        print("Rate limiting: disabled (no active LLM client)")
+                        print(f"Config requests_per_minute: {rate_cfg.get('requests_per_minute', 'N/A')}")
+                    return 0
+                elif args.rl_command == "reset":
+                    client, _ = _resolve_llm(args)
+                    if hasattr(client, "limiter"):
+                        client.limiter.reset_stats()
+                        print("Rate limiter statistics reset.")
+                    else:
+                        print("No active rate limiter to reset.")
+                    return 0
+                elif args.rl_command == "enable":
+                    updates = {
+                        "rate_limit": {
+                            "enabled": True,
+                            "requests_per_minute": args.rpm,
+                            "burst_size": args.burst,
+                            "concurrency_limit": args.concurrency,
+                        }
+                    }
+                    save_config(updates, workspace_root=workspace)
+                    print(f"Rate limiting enabled: {args.rpm} req/min, burst={args.burst}, concurrency={args.concurrency}")
+                    print("Restart the LLM client for changes to take effect.")
+                    return 0
+                elif args.rl_command == "disable":
+                    updates = {"rate_limit": {"enabled": False}}
+                    save_config(updates, workspace_root=workspace)
+                    print("Rate limiting disabled.")
+                    print("Restart the LLM client for changes to take effect.")
+                    return 0
+                else:
+                    parser.error("unknown rate-limit command")
                 return 0
 
             # Phase 11: REPL

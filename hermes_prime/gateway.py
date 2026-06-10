@@ -54,7 +54,6 @@ class GatewayManager:
 
     def list_platforms(self) -> list[dict[str, Any]]:
         try:
-            from pathlib import Path as P
             platforms_dir = Path(__file__).parent.parent / "external" / "hermes-agent" / "gateway" / "platforms"
             if not platforms_dir.exists():
                 return [{"error": "Platforms directory not found"}]

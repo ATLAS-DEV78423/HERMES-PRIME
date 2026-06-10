@@ -27,6 +27,12 @@ def load_config(workspace_root: str | Path | None = None) -> dict[str, Any]:
         "max_tokens": 2048,
         "system_prompt": "You are Hermes Prime, an intelligent AI assistant with access to tools.",
         "workspace_root": str(Path(workspace_root).resolve() if workspace_root else Path.cwd()),
+        "rate_limit": {
+            "enabled": False,
+            "requests_per_minute": 30.0,
+            "burst_size": 5,
+            "concurrency_limit": 3,
+        },
     }
 
     _merge_yaml(_home_dir() / _CONFIG_FILE_NAME, config)

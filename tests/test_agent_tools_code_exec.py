@@ -49,3 +49,15 @@ def test_code_exec_allowed_math():
     from hermes_prime.agent.tools.code_exec import execute_code
     result = execute_code("sum([1, 2, 3, 4, 5])")
     assert "15" in result
+
+
+def test_code_exec_timeout():
+    from hermes_prime.agent.tools.code_exec import execute_code
+    result = execute_code("while True: pass")
+    assert "Timeout" in result
+
+
+def test_code_exec_defense_in_depth():
+    from hermes_prime.agent.tools.code_exec import execute_code
+    result = execute_code("type(())")
+    assert "Error" not in result

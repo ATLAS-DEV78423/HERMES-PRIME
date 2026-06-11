@@ -97,7 +97,7 @@ def execute_code(code: str, language: str = "python") -> str:
         return f"Language '{language}' not supported yet."
 
     if not _check_code_safe(code):
-        return "Error: Code contains dangerous attribute access."
+        return "Error: Blocked by pre-execution safety scan (defense-in-depth)."
 
     bootstrap_script = _SANDBOX_BOOTSTRAP.format(code=code)
 

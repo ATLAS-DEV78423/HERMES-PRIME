@@ -271,5 +271,49 @@ class AnimationsTests(unittest.TestCase):
             sys.stdout = old_stdout
 
 
+def test_tui_theme_has_keys():
+    from hermes_prime.tui.theme import HERMES_THEME
+    assert "core_signal" in HERMES_THEME
+    assert "governance" in HERMES_THEME
+
+
+def test_tui_banner_has_logo():
+    from hermes_prime.tui.banner import HERMES_PRIME_LOGO
+    assert isinstance(HERMES_PRIME_LOGO, str)
+    assert len(HERMES_PRIME_LOGO.strip()) > 0
+
+
+def test_tui_animations_functions_import():
+    from hermes_prime.tui.animations import pulse_loader, typewriter, boot_sequence
+    assert callable(pulse_loader)
+    assert callable(typewriter)
+    assert callable(boot_sequence)
+
+
+def test_tui_animations_pulse_loader_defaults():
+    from hermes_prime.tui.animations import pulse_loader
+    import inspect
+    sig = inspect.signature(pulse_loader)
+    assert sig.parameters["steps"].default == 5
+
+
+def test_tui_components_importable():
+    from hermes_prime.tui.components import StatusPill, OperatorConsole, TelemetryHeader
+    assert callable(StatusPill)
+    assert callable(OperatorConsole)
+    assert callable(TelemetryHeader)
+
+
+def test_tui_console_importable():
+    from hermes_prime.tui.console import HermesConsole
+    console = HermesConsole()
+    assert hasattr(console, "print")
+
+
+def test_tui_dashboard_importable():
+    from hermes_prime.tui.dashboard import HermesDashboard
+    assert callable(HermesDashboard)
+
+
 if __name__ == "__main__":
     unittest.main()

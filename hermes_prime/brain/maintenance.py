@@ -189,7 +189,7 @@ class BrainMaintenanceAgent:
                         c.execute("DELETE FROM brain_edges WHERE edge_id = ?", (edge.edge_id,))
                         c.commit()
                     except Exception:
-                        logger.warning("BrainMaintainer failed to prune dead edge")
+                        logger.warning("BrainMaintainer failed to prune dead edge at %s", edge.edge_id)
         return pruned
 
     def _compute_similarity(self, a: BrainNode, b: BrainNode) -> float:

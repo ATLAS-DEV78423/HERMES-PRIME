@@ -266,7 +266,7 @@ class AstMiner:
                     parser.set_language(language)
                 parsers[lang_name] = parser
             except Exception:
-                logger.warning("Failed to load parser language, skipping")
+                logger.warning("Failed to load parser language '%s', skipping", lang_name)
                 continue
         if not parsers:
             return None

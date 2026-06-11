@@ -235,6 +235,16 @@ HERMES-PRIME acts as the deterministic governance orchestrator across several po
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Production Deployment
+
+See [Production Deployment Guide](docs/production-deployment.md) for:
+- Submodule initialization
+- Secret configuration
+- Docker deployment
+- Health checks, backup/restore, and monitoring
+
+---
+
 ## Developer Quickstart
 
 Install dev tools and run tests locally:

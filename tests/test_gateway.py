@@ -156,65 +156,41 @@ def test_status_import_error(manager) -> None:
 
 # --- list_platforms ---
 
-def test_list_platforms_found(manager) -> None:
-    platform_dir = (
-        Path(__file__).parent.parent / "external" / "hermes-agent" / "gateway" / "platforms"
-    )
-    platform_dir.mkdir(parents=True, exist_ok=True)
-    (platform_dir / "slack.py").write_text("# slack")
-    (platform_dir / "discord.py").write_text("# discord")
-    (platform_dir / "__init__.py").write_text("")
-    (platform_dir / "_private.py").write_text("# internal")
-    try:
-        results = manager.list_platforms()
-        names = {p["name"] for p in results}
-        assert "slack" in names
-        assert "discord" in names
-        assert "__init__" not in names
-        assert "_private" not in names
-    finally:
-        import shutil
-        shutil.rmtree(platform_dir, ignore_errors=True)
+def _make_platforms_dir(tmp_path: Path, files: list[str]) -> Path:
+    d = tmp_path / "gateway" / "platforms"
+    d.mkdir(parents=True, exist_ok=True)
+    for f in files:
+        (d / f).write_text("")
+    return d
 
 
-def test_list_platforms_empty_dir(manager) -> None:
-    platform_dir = (
-        Path(__file__).parent.parent / "external" / "hermes-agent" / "gateway" / "platforms"
-    )
-    platform_dir.mkdir(parents=True, exist_ok=True)
-    (platform_dir / "__init__.py").write_text("")
-    try:
-        results = manager.list_platforms()
-        assert results == []
-    finally:
-        import shutil
-        shutil.rmtree(platform_dir, ignore_errors=True)
+def test_list_platforms_found(tmp_path: Path, manager) -> None:
+    manager._platforms_dir = _make_platforms_dir(tmp_path, ["slack.py", "discord.py", "__init__.py", "_private.py"])
+    results = manager.list_platforms()
+    names = {p["name"] for p in results}
+    assert "slack" in names
+    assert "discord" in names
+    assert "__init__" not in names
+    assert "_private" not in names
 
 
-def test_list_platforms_no_directory(manager) -> None:
-    platform_dir = (
-        Path(__file__).parent.parent / "external" / "hermes-agent" / "gateway" / "platforms"
-    )
-    platform_dir.mkdir(parents=True, exist_ok=True)
-    import shutil
-    shutil.rmtree(platform_dir)
+def test_list_platforms_empty_dir(tmp_path: Path, manager) -> None:
+    manager._platforms_dir = _make_platforms_dir(tmp_path, ["__init__.py"])
+    results = manager.list_platforms()
+    assert results == []
+
+
+def test_list_platforms_no_directory(tmp_path: Path, manager) -> None:
+    manager._platforms_dir = tmp_path / "gateway" / "platforms"
     results = manager.list_platforms()
     assert results == [{"error": "Platforms directory not found"}]
 
 
-def test_list_platforms_exception(manager) -> None:
-    platform_dir = (
-        Path(__file__).parent.parent / "external" / "hermes-agent" / "gateway" / "platforms"
-    )
-    platform_dir.mkdir(parents=True, exist_ok=True)
-    (platform_dir / "slack.py").write_text("# slack")
-    try:
-        with patch("pathlib.Path.glob", side_effect=PermissionError("denied")):
-            results = manager.list_platforms()
-            assert results == [{"error": "denied"}]
-    finally:
-        import shutil
-        shutil.rmtree(platform_dir, ignore_errors=True)
+def test_list_platforms_exception(tmp_path: Path, manager) -> None:
+    manager._platforms_dir = _make_platforms_dir(tmp_path, ["slack.py"])
+    with patch("pathlib.Path.glob", side_effect=PermissionError("denied")):
+        results = manager.list_platforms()
+        assert results == [{"error": "denied"}]
 
 
 def test_thread_is_daemon(manager) -> None:

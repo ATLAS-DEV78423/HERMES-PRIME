@@ -24,13 +24,16 @@ class TrustStoreTests(unittest.TestCase):
         self.addCleanup(self.store.close)
 
     def test_intent_and_token_persist(self) -> None:
+        import datetime as dt
+
         now = utc_now_iso()
+        future = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=1)).isoformat().replace("+00:00", "Z")
         intent = IntentRoot(
             intent_root=new_urn_uuid(),
             scope=self.tmp.name,
             issued_to="user:test",
             issued_at=now,
-            expires_at=now,
+            expires_at=future,
             signature="sig:test",
         )
         token = CapabilityToken(
@@ -39,7 +42,7 @@ class TrustStoreTests(unittest.TestCase):
             scope=self.tmp.name,
             actions=["filesystem.read"],
             risk_tier_ceiling=RiskTier.T1,
-            expires_at=now,
+            expires_at=future,
             intent_root=intent.intent_root,
             issued_to="user:test",
             issued_at=now,

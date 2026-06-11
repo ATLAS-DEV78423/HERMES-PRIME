@@ -112,7 +112,7 @@ select = ["E", "F", "W"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["F401", "F841"]
+"tests/**/*.py" = ["F401", "F841", "F821"]
 "**/__init__.py" = ["F401"]
 "hermes_prime/cli.py" = ["E402"]
 

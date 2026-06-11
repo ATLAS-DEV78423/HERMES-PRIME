@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 
 from hermes_prime.signing import HMACSigner
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -70,6 +73,12 @@ def get_signer(subsystem: str) -> HMACSigner:
     env_val = os.environ.get(cfg.env_var)
     if env_val:
         return HMACSigner(identity=cfg.identity, secret=env_val.encode("utf-8"))
+    if cfg.secret == b"default-dev-secret":
+        logger.warning(
+            "Subsystem '%s' using default dev secret. Set %s env var for production.",
+            subsystem,
+            cfg.env_var,
+        )
     return HMACSigner(identity=cfg.identity, secret=cfg.secret)
 
 

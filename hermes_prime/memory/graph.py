@@ -54,7 +54,7 @@ class KnowledgeGraph:
     def add_edge(self, child_id: str, parent_id: str) -> None:
         if child_id == parent_id:
             raise ValueError("cannot add self-referential edge")
-        if parent_id in self._ancestors_set(parent_id):
+        if child_id in self._ancestors_set(parent_id):
             raise ValueError("adding this edge would create a cycle")
         self._edges[child_id] = parent_id
         self._children[parent_id].append(child_id)

@@ -132,13 +132,13 @@ class TestSubagentManagerMapReduce:
             mock_run.side_effect = [
                 mock_agent_result,
                 mock_agent_result,
-                Exception("reduce failed"),
+                RuntimeError("reduce failed"),
             ]
 
             from hermes_prime.agent.subagent import SubagentManager
 
             mgr = SubagentManager(llm_client=mock_llm_client, max_workers=2)
-            with pytest.raises(Exception, match="reduce failed"):
+            with pytest.raises(RuntimeError, match="reduce failed"):
                 mgr.map_reduce(
                     subtasks=["a", "b"],
                     reducer_prompt="reduce",

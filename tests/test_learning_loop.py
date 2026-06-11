@@ -34,22 +34,18 @@ def test_outcome_tracking():
             )
 
         metrics = outcome_store.get_metrics()
-        assert metrics["total"] == 10, f"Expected 10, got {metrics['total']}"
+        assert metrics["total"] == 10
         assert metrics["approved"] == 7
         assert metrics["rejected_by_sentinel"] == 3
         assert metrics["parse_failures"] == 0
-        print(f"Outcome metrics: {metrics}")
 
         recent = outcome_store.get_recent(limit=5)
         assert len(recent) == 5
-        print(f"Recent: {len(recent)} outcomes")
 
         by_type = outcome_store.get_by_action_type("filesystem.read", limit=10)
         assert len(by_type) == 5
-        print(f"By type: {len(by_type)} filesystem.read outcomes")
 
         outcome_store.close()
-        print("Outcome tracking: OK")
 
 
 def test_learning_registry():
@@ -110,8 +106,6 @@ def test_learning_registry():
 
         metrics = registry.get_metrics()
         assert metrics["total_patterns"] == 1
-        print(f"Registry metrics: {metrics}")
-        print("Learning registry: OK")
 
 
 def test_learning_engine():
@@ -146,18 +140,14 @@ def test_learning_engine():
         result = engine.reflect(min_outcomes=5)
         assert result["reflected"]
         assert result["patterns_created"] > 0
-        print(f"Reflection created {result['patterns_created']} patterns")
-        print(f"Reflection result: {result}")
 
         # Second reflection shouldn't duplicate patterns
         result2 = engine.reflect(min_outcomes=5)
-        new_patterns = result2.get("patterns_created", 0)
-        print(f"Second reflection created {new_patterns} new patterns")
+        assert result2.get("patterns_created", 0) == 0
 
         status = engine.status()
         assert status["ready_to_learn"] is True
         assert status["outcomes"]["total"] == 10
-        print(f"Engine status: {status}")
 
         # Test with parse failures too
         for i in range(3):
@@ -175,9 +165,8 @@ def test_learning_engine():
             )
 
         result3 = engine.reflect(min_outcomes=5)
-        print(f"Reflection with parse failures: {result3}")
+        assert result3["reflected"]
         outcome_store.close()
-        print("Learning engine: OK")
 
 
 def test_prompt_augmenter():
@@ -216,11 +205,9 @@ def test_prompt_augmenter():
             "read some files", action_type="filesystem.read"
         )
         assert len(guidance) > 0
-        print(f"Augmentation block:\n{guidance}")
 
         # Task should match the task pattern tag
         assert "Read tasks" in guidance or "Always output" in guidance
-        print("Prompt augmenter: OK")
 
 
 if __name__ == "__main__":
@@ -228,4 +215,3 @@ if __name__ == "__main__":
     test_learning_registry()
     test_learning_engine()
     test_prompt_augmenter()
-    print("\nAll learning loop tests passed!")

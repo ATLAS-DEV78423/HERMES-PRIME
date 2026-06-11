@@ -5,6 +5,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 
 class ProfileManager:
     """Multi-instance profile management."""
@@ -40,7 +42,6 @@ class ProfileManager:
             return {"error": f"Profile '{name}' already exists"}
         profile_path.mkdir(parents=True)
         config = {"name": name, "description": description}
-        import yaml
         with open(profile_path / "config.yaml", "w") as f:
             yaml.dump(config, f)
         (profile_path / ".env").touch()
@@ -67,7 +68,6 @@ class ProfileManager:
         old_path.rename(new_path)
         config_file = new_path / "config.yaml"
         if config_file.exists():
-            import yaml
             config = yaml.safe_load(config_file.read_text()) or {}
             config["name"] = new_name
             with open(config_file, "w") as f:

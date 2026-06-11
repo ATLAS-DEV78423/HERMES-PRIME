@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from collections import Counter
 from dataclasses import dataclass
@@ -192,8 +193,6 @@ class NeuralGraph:
             source_execution=source_execution,
             metadata=metadata or {},
         )
-        import json
-
         self._conn.execute(
             """INSERT OR REPLACE INTO brain_nodes
                (node_id, node_type, title, content, tags, confidence, access_count,
@@ -235,7 +234,6 @@ class NeuralGraph:
         allowed = {"title", "content", "tags", "confidence", "metadata", "node_type"}
         updates: list[str] = []
         params: list[Any] = []
-        import json
 
         for key, value in kwargs.items():
             if key in allowed:
@@ -286,8 +284,6 @@ class NeuralGraph:
             created_at=utc_now_iso(),
             metadata=metadata or {},
         )
-        import json
-
         try:
             self._conn.execute(
                 """INSERT OR REPLACE INTO brain_edges
@@ -376,7 +372,6 @@ class NeuralGraph:
         return [self._row_to_node(r) for r in rows]
 
     def search_by_tags(self, tags: list[str], limit: int = 20) -> list[BrainNode]:
-        import json
 
         results: list[BrainNode] = []
         rows = self._conn.execute(
@@ -446,7 +441,6 @@ class NeuralGraph:
         self._conn.close()
 
     def _row_to_node(self, row: sqlite3.Row) -> BrainNode:
-        import json
 
         return BrainNode(
             node_id=row["node_id"],
@@ -464,7 +458,6 @@ class NeuralGraph:
         )
 
     def _row_to_edge(self, row: sqlite3.Row) -> BrainEdge:
-        import json
 
         return BrainEdge(
             edge_id=row["edge_id"],

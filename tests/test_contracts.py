@@ -18,7 +18,10 @@ from hermes_prime.utils import new_urn_uuid, utc_now_iso
 
 class ContractTests(unittest.TestCase):
     def test_action_and_capability_contracts_validate(self) -> None:
+        import datetime as dt
+
         now = utc_now_iso()
+        future = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=1)).isoformat().replace("+00:00", "Z")
         with tempfile.TemporaryDirectory() as tmp:
             scope = str(Path(tmp).resolve())
             intent = IntentRoot(
@@ -26,7 +29,7 @@ class ContractTests(unittest.TestCase):
                 scope=scope,
                 issued_to="user:test",
                 issued_at=now,
-                expires_at=now,
+                expires_at=future,
                 signature="sig:test",
             )
             action = ActionProposal(
@@ -44,7 +47,7 @@ class ContractTests(unittest.TestCase):
                 scope=scope,
                 actions=["filesystem.read"],
                 risk_tier_ceiling=RiskTier.T1,
-                expires_at=now,
+                expires_at=future,
                 intent_root=intent.intent_root,
                 issued_to="user:test",
                 issued_at=now,

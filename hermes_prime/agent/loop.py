@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -67,13 +69,14 @@ class AgentLoop:
         return "\n".join(lines)
 
     def build_messages(self, prompt: str, context: AgentContext | None = None) -> list[dict[str, Any]]:
-        base = _SYSTEM_PROMPT.format(tool_schemas=self._tool_schemas_text())
+        tool_text = self._tool_schemas_text()
+        base = _SYSTEM_PROMPT.replace("{tool_schemas}", tool_text)
         if context and context.system_prompt:
             system_prompt = context.system_prompt
             if "{tool_schemas}" in system_prompt:
-                system_prompt = system_prompt.format(tool_schemas=self._tool_schemas_text())
+                system_prompt = system_prompt.replace("{tool_schemas}", tool_text)
             else:
-                system_prompt = f"{system_prompt}\n\nAvailable tools:\n{self._tool_schemas_text()}"
+                system_prompt = f"{system_prompt}\n\nAvailable tools:\n{tool_text}"
         else:
             system_prompt = base
         messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
@@ -130,7 +133,6 @@ class AgentLoop:
             content = response.message_content.strip()
 
             # Check if response contains a tool call JSON block
-            import re
             tool_match = re.search(
                 r'```json\s*(\{.*?"tool"\s*:\s*"[^"]+".*?\})\s*```',
                 content,
@@ -138,7 +140,6 @@ class AgentLoop:
             )
             if tool_match:
                 try:
-                    import json
                     call_data = json.loads(tool_match.group(1))
                     tool_name = call_data["tool"]
                     tool_args = call_data.get("arguments", {})

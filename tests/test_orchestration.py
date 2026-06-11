@@ -307,7 +307,9 @@ class DispatcherTests(unittest.TestCase):
         self.assertEqual(self.mesh.get(n2.agent_id).status, AgentStatus.KILLED)
 
     def test_kill_missing_agent_raises(self) -> None:
-        with self.assertRaises(Exception):
+        from hermes_prime.orch.dispatcher import DispatchError
+
+        with self.assertRaises(DispatchError):
             self.dispatcher.kill("urn:uuid:does-not-exist")
 
     def test_list_agents(self) -> None:

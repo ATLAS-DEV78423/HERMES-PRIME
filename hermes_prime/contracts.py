@@ -5,6 +5,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
+import datetime as dt
+
 from .utils import (
     contains_null_byte,
     contains_shell_meta,
@@ -115,8 +117,14 @@ def _validate_scope_text(value: str, field_name: str = "scope") -> None:
         raise ValueError(f"{field_name} must not contain traversal sequences")
 
 
-def _ensure_future_iso(value: str, field_name: str) -> None:
+def _validate_iso_format(value: str, field_name: str) -> None:
     parse_iso8601(value)
+
+
+def _require_future_iso(value: str, field_name: str) -> None:
+    parsed = parse_iso8601(value)
+    if parsed <= dt.datetime.now(dt.timezone.utc):
+        raise ValueError(f"{field_name} must be in the future, got {value}")
 
 
 @dataclass(frozen=True)
@@ -133,8 +141,8 @@ class IntentRoot:
             raise ValueError("intent_root must not be empty")
         _require_urn_uuid(self.intent_root, "intent_root")
         _validate_scope_text(self.scope, "scope")
-        _ensure_future_iso(self.issued_at, "issued_at")
-        _ensure_future_iso(self.expires_at, "expires_at")
+        _validate_iso_format(self.issued_at, "issued_at")
+        _require_future_iso(self.expires_at, "expires_at")
         if not self.signature:
             raise ValueError("signature must not be empty")
 
@@ -172,7 +180,7 @@ class ActionProposal:
         _require_urn_uuid(self.intent_root, "intent_root")
         if not self.capability:
             raise ValueError("capability must not be empty")
-        _ensure_future_iso(self.proposed_at, "proposed_at")
+        _validate_iso_format(self.proposed_at, "proposed_at")
 
     def normalized_scope(self) -> str:
         return str(Path(scope_prefix(self.scope)).resolve())
@@ -208,7 +216,7 @@ class SentinelDecision:
         if not self.decision_id:
             raise ValueError("decision_id must not be empty")
         _require_urn_uuid(self.decision_id, "decision_id")
-        _ensure_future_iso(self.timestamp, "timestamp")
+        _validate_iso_format(self.timestamp, "timestamp")
         _require_urn_uuid(self.action_id, "action_id")
         if self.risk_tier is not None and not isinstance(self.risk_tier, RiskTier):
             self.risk_tier = RiskTier(self.risk_tier)
@@ -250,9 +258,9 @@ class CapabilityToken:
         _validate_scope_text(self.scope)
         if not isinstance(self.risk_tier_ceiling, RiskTier):
             self.risk_tier_ceiling = RiskTier(self.risk_tier_ceiling)
-        _ensure_future_iso(self.expires_at, "expires_at")
+        _require_future_iso(self.expires_at, "expires_at")
         _require_urn_uuid(self.intent_root, "intent_root")
-        _ensure_future_iso(self.issued_at, "issued_at")
+        _validate_iso_format(self.issued_at, "issued_at")
         if not self.nonce:
             raise ValueError("nonce must not be empty")
 
@@ -303,7 +311,7 @@ class MinerAttestation:
             raise ValueError("attestation_id must not be empty")
         _require_urn_uuid(self.attestation_id, "attestation_id")
         _validate_scope_text(self.scan_scope)
-        _ensure_future_iso(self.scan_time, "scan_time")
+        _validate_iso_format(self.scan_time, "scan_time")
         if not self.content_summary_hash:
             self.content_summary_hash = hash_struct(self.results)
         if not self.signature:
@@ -345,7 +353,7 @@ class MemoryClaim:
         if not self.fact_id:
             raise ValueError("fact_id must not be empty")
         _require_urn_uuid(self.fact_id, "fact_id")
-        _ensure_future_iso(self.timestamp, "timestamp")
+        _validate_iso_format(self.timestamp, "timestamp")
         if not isinstance(self.trust_state, TrustState):
             self.trust_state = TrustState(self.trust_state)
         if not isinstance(self.tier, MemoryTier):
@@ -388,7 +396,7 @@ class ProvenanceAttestation:
             raise ValueError("attestation_id must not be empty")
         _require_urn_uuid(self.attestation_id, "attestation_id")
         _require_urn_uuid(self.intent_root, "intent_root")
-        _ensure_future_iso(self.generated_at, "generated_at")
+        _validate_iso_format(self.generated_at, "generated_at")
         if not isinstance(self.lifecycle_state, LifecycleState):
             self.lifecycle_state = LifecycleState(self.lifecycle_state)
 
@@ -427,7 +435,7 @@ class InferenceAttestation:
         if not self.attestation_id:
             raise ValueError("attestation_id must not be empty")
         _require_urn_uuid(self.attestation_id, "attestation_id")
-        _ensure_future_iso(self.timestamp, "timestamp")
+        _validate_iso_format(self.timestamp, "timestamp")
         if not self.signature:
             raise ValueError("signature must not be empty")
 
@@ -495,7 +503,7 @@ class AuditTrace:
         if not self.trace_id:
             raise ValueError("trace_id must not be empty")
         _require_urn_uuid(self.trace_id, "trace_id")
-        _ensure_future_iso(self.created_at, "created_at")
+        _validate_iso_format(self.created_at, "created_at")
         if self.intent_root:
             _require_urn_uuid(self.intent_root, "intent_root")
 
@@ -532,7 +540,7 @@ class PatternClassification:
         if not self.classification_id:
             raise ValueError("classification_id must not be empty")
         _require_urn_uuid(self.classification_id, "classification_id")
-        _ensure_future_iso(self.classified_at, "classified_at")
+        _validate_iso_format(self.classified_at, "classified_at")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -563,7 +571,7 @@ class FabricPatternMatch:
         if not self.match_id:
             raise ValueError("match_id must not be empty")
         _require_urn_uuid(self.match_id, "match_id")
-        _ensure_future_iso(self.retrieval_time, "retrieval_time")
+        _validate_iso_format(self.retrieval_time, "retrieval_time")
         if self.authority != "heuristic_guidance_only":
             raise ValueError("authority must be heuristic_guidance_only")
 
@@ -599,7 +607,7 @@ class FabricAugmentation:
         if not self.augmentation_id:
             raise ValueError("augmentation_id must not be empty")
         _require_urn_uuid(self.augmentation_id, "augmentation_id")
-        _ensure_future_iso(self.generated_at, "generated_at")
+        _validate_iso_format(self.generated_at, "generated_at")
         if self.authority != "heuristic_guidance_only":
             raise ValueError("authority must be heuristic_guidance_only")
 
@@ -647,7 +655,7 @@ class AgentNode:
         if self.parent_id is not None:
             _require_urn_uuid(self.parent_id, "parent_id")
         _require_urn_uuid(self.intent_root, "intent_root")
-        _ensure_future_iso(self.spawned_at, "spawned_at")
+        _validate_iso_format(self.spawned_at, "spawned_at")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -694,7 +702,7 @@ class AgentSpawnAttestation:
         _require_urn_uuid(self.agent_id, "agent_id")
         _require_urn_uuid(self.spawned_by, "spawned_by")
         _require_urn_uuid(self.intent_root, "intent_root")
-        _ensure_future_iso(self.spawned_at, "spawned_at")
+        _validate_iso_format(self.spawned_at, "spawned_at")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -729,7 +737,7 @@ class ExecutionOutcome:
 
     def __post_init__(self) -> None:
         _require_urn_uuid(self.execution_id, "execution_id")
-        _ensure_future_iso(self.timestamp, "timestamp")
+        _validate_iso_format(self.timestamp, "timestamp")
 
     def to_dict(self) -> dict[str, Any]:
         return {

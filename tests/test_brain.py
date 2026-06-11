@@ -48,7 +48,6 @@ def test_neural_graph_node_crud():
         assert deleted is True
         assert g.get_node(node.node_id) is None
         g.close()
-    print("NeuralGraph CRUD: OK")
 
 
 def test_neural_graph_edges():
@@ -75,7 +74,6 @@ def test_neural_graph_edges():
         assert len(path) == 2
 
         g.close()
-    print("NeuralGraph edges: OK")
 
 
 def test_brain_journal():
@@ -131,7 +129,6 @@ def test_brain_journal():
         assert decision.node_type == NodeType.DECISION
 
         g.close()
-    print("BrainJournal: OK")
 
 
 def test_auto_linker():
@@ -165,9 +162,9 @@ def test_auto_linker():
         suggested = linker.suggest_tags("Python exception handling patterns")
         assert len(suggested) > 0
 
-        tags = linker.suggest_tags("completely unrelated topic about cooking pasta")
+        unrelated_tags = linker.suggest_tags("completely unrelated topic about cooking pasta")
+        assert isinstance(unrelated_tags, list)
         g.close()
-    print("AutoLinker: OK")
 
 
 def test_maintenance_agent():
@@ -233,7 +230,6 @@ def test_maintenance_agent():
         assert health["orphaned_nodes"] >= 0
 
         g.close()
-    print("BrainMaintenance: OK")
 
 
 def test_obsidian_export():
@@ -272,7 +268,6 @@ def test_obsidian_export():
         assert "Neural Networks" in index_content
 
         g.close()
-    print("Obsidian export: OK")
 
 
 def test_metrics():
@@ -299,15 +294,3 @@ def test_metrics():
         assert count == 4
 
         g.close()
-    print("Brain metrics: OK")
-
-
-if __name__ == "__main__":
-    test_neural_graph_node_crud()
-    test_neural_graph_edges()
-    test_brain_journal()
-    test_auto_linker()
-    test_maintenance_agent()
-    test_obsidian_export()
-    test_metrics()
-    print("\nAll brain tests passed!")

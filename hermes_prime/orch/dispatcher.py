@@ -57,19 +57,25 @@ class Dispatcher:
             ActionType.MEMORY_WRITE,
         ]
 
-        now = datetime.now(timezone.utc).isoformat()
+        from datetime import timedelta
+        from hermes_prime.secrets import get_signer as _get_signer
+
+        now = datetime.now(timezone.utc)
+        expires = (now + timedelta(hours=1)).isoformat()
+        signer = _get_signer("governed-agent")
+        sig = signer.sign(f"agent-spawn:{intent_root}:{scope}".encode("utf-8"))
         cap_token = CapabilityToken(
             token_id=new_urn_uuid(),
             capability="agent.spawn",
             scope=scope,
             actions=[a.value for a in actions],
             risk_tier_ceiling=request.risk_tier_ceiling,
-            expires_at=now,
+            expires_at=expires,
             intent_root=intent_root,
             issued_to=spawned_by or "system",
-            issued_at=now,
+            issued_at=now.isoformat(),
             nonce=new_urn_uuid(),
-            signature="temporary",
+            signature=sig,
         )
 
         node = self._mesh.register_agent(

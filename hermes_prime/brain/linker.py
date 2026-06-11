@@ -199,7 +199,10 @@ class AutoLinker:
                     for tag in node.tags:
                         tag_counter[tag] += 1
                 if token.lower() in [t.lower() for t in node.tags]:
-                    tag_counter[token] += 3
+                    for tag in node.tags:
+                        if tag.lower() == token.lower():
+                            tag_counter[tag] += 3
+                            break
         return [tag for tag, _ in tag_counter.most_common(10)]
 
     def _extract_keywords(self, text: str) -> set[str]:

@@ -11,7 +11,8 @@ _SUBPROCESS_TIMEOUT = 10  # seconds
 _DANGEROUS_DUNDERS = frozenset({
     "__class__", "__bases__", "__subclasses__", "__globals__", "__code__",
     "__closure__", "__func__", "__self__", "__mro__", "__base__",
-    "__builtins__", "__import__",
+    "__builtins__", "__import__", "__dict__", "__init__", "__new__",
+    "__reduce__", "__reduce_ex__",
 })
 
 

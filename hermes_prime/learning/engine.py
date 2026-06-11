@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+import datetime as dt
 
 from hermes_prime.contracts import LearnedPattern
 from hermes_prime.learning.outcome import OutcomeStore
@@ -8,6 +11,8 @@ from hermes_prime.learning.registry import LearningRegistry
 from hermes_prime.memory.store import MemoryStore
 from hermes_prime.memory.consolidation import ConsolidationRequest, ReflectiveConsolidator
 from hermes_prime.utils import new_urn_uuid, utc_now_iso
+
+logger = logging.getLogger(__name__)
 
 
 class LearningEngine:
@@ -251,15 +256,17 @@ class LearningEngine:
 
             signer = _get_signer("learning")
             sig = signer.sign(b"learning-reflection")
+            now = dt.datetime.now(dt.timezone.utc)
             dummy_intent = IntentRoot(
                 intent_root=new_urn_uuid(),
                 scope="hermes-prime://learning/reflection",
                 issued_to="system:learning-engine",
-                issued_at=utc_now_iso(),
-                expires_at=utc_now_iso(),
+                issued_at=(now - dt.timedelta(seconds=1)).isoformat().replace("+00:00", "Z"),
+                expires_at=(now + dt.timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
                 signature=sig,
             )
         except Exception:
+            logger.exception("LearningEngine reflection consolidation failed")
             return
 
         request = ConsolidationRequest(

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _CONFIG_FILE_NAME = "config.yaml"
 
@@ -82,4 +85,4 @@ def _merge_yaml(path: Path, config: dict[str, Any]) -> None:
         if isinstance(data, dict):
             config.update(data)
     except Exception:
-        pass
+        logger.warning("Failed to merge config from %s", path)

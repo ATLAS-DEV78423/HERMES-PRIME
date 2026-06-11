@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
 from hermes_prime.contracts import MemoryClaim, MemoryTier, TrustState
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
 from hermes_prime.utils import new_urn_uuid, utc_now_iso
+
+logger = logging.getLogger(__name__)
 
 
 class MemPalaceBackend(MemoryBackend):
@@ -100,6 +103,7 @@ class MemPalaceBackend(MemoryBackend):
                 )
             return None
         except Exception:
+            logger.exception("MemPalaceBackend.get failed for key %s", fact_id)
             return None
 
     def search(self, query: str, limit: int = 10) -> list[MemorySearchResult]:
@@ -135,6 +139,7 @@ class MemPalaceBackend(MemoryBackend):
                 return search_results
             return []
         except Exception:
+            logger.exception("MemPalaceBackend.search failed for query %s", query)
             return []
 
     def list_all(self) -> list[MemoryClaim]:
@@ -159,6 +164,7 @@ class MemPalaceBackend(MemoryBackend):
                     )
             return claims
         except Exception:
+            logger.exception("MemPalaceBackend.list_all failed")
             return []
 
     def delete(self, fact_id: str) -> bool:
@@ -174,6 +180,7 @@ class MemPalaceBackend(MemoryBackend):
                 return True
             return False
         except Exception:
+            logger.exception("MemPalaceBackend.delete failed for key %s", fact_id)
             return False
 
     def count(self) -> int:
@@ -182,6 +189,7 @@ class MemPalaceBackend(MemoryBackend):
             collection = self._get_collection()
             return collection.count()
         except Exception:
+            logger.exception("MemPalaceBackend.count failed")
             return 0
 
     def gc(self, before_timestamp: str) -> int:
@@ -202,6 +210,7 @@ class MemPalaceBackend(MemoryBackend):
                 collection.delete(ids=to_delete)
             return len(to_delete)
         except Exception:
+            logger.exception("MemPalaceBackend.gc failed")
             return 0
 
     def _claim_from_mempalace_result(

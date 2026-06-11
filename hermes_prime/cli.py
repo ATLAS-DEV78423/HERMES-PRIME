@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Add upstream hermes-agent to sys.path so we can import AIAgent, HermesCLI, gateway, etc.
 _HERMES_AGENT_PATH = str(Path(__file__).resolve().parent.parent / "external" / "hermes-agent")
@@ -696,14 +699,14 @@ def main(argv: list[str] | None = None) -> int:
                 if o.health_check():
                     available.append("Ollama")
             except Exception:
-                pass
+                logger.debug("Ollama health check failed")
             try:
                 from hermes_prime.llm.vllm_adapter import VLLMClient
                 v = VLLMClient()
                 if v.health_check():
                     available.append("vLLM")
             except Exception:
-                pass
+                logger.debug("vLLM health check failed")
             hint = f" (detected: {', '.join(available)})" if available else ""
             print(
                 f"No LLM provider available. Install Ollama (ollama.ai) or start an OpenAI-compatible server.{hint}"

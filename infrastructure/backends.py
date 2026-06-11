@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -157,6 +160,7 @@ class BackendRegistry:
             __import__(name)
             return True
         except Exception:
+            logger.debug("Module %s not usable", name)
             return False
 
     def _locate_compiled_opa_bundle(self) -> str | None:

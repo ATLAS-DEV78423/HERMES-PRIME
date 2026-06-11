@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import importlib.metadata
 import importlib.util
+import logging
 import shutil
 import sqlite3
 import sys
+
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -17,6 +19,8 @@ from infrastructure.backends import BackendRegistry
 from infrastructure.policy_engine.bundle import PolicyBundle
 from infrastructure.trust_store import TrustStore
 from hermes_prime.memory.backends.sqlite_backend import SQLiteMemoryBackend
+
+logger = logging.getLogger(__name__)
 
 
 class Severity(str, Enum):
@@ -140,6 +144,7 @@ def _module_ok(name: str) -> bool:
         importlib.import_module(name)
         return True
     except Exception:
+        logger.debug("Module %s not available", name)
         return False
 
 

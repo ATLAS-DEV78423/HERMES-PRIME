@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 from pathlib import Path
 
 from hermes_prime.contracts import MemoryClaim
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
 from hermes_prime.utils import utc_now_iso
+
+logger = logging.getLogger(__name__)
 
 
 class AtlasBackend(MemoryBackend):
@@ -62,6 +65,7 @@ class AtlasBackend(MemoryBackend):
         try:
             result = collection.get(ids=[fact_id], include=["documents", "metadatas"])
         except Exception:
+            logger.exception("AtlasBackend.get failed for key %s", fact_id)
             return None
         if not result["ids"]:
             return None
@@ -90,6 +94,7 @@ class AtlasBackend(MemoryBackend):
                 include=["documents", "metadatas", "distances"],
             )
         except Exception:
+            logger.exception("AtlasBackend.search failed for query %s", query)
             return []
         if not results["ids"] or not results["ids"][0]:
             return []
@@ -134,6 +139,7 @@ class AtlasBackend(MemoryBackend):
         try:
             result = collection.get(include=["documents", "metadatas"])
         except Exception:
+            logger.exception("AtlasBackend.list_all failed")
             return []
         if not result["ids"]:
             return []
@@ -172,6 +178,7 @@ class AtlasBackend(MemoryBackend):
             collection.delete(ids=[fact_id])
             return True
         except Exception:
+            logger.exception("AtlasBackend.delete failed for key %s", fact_id)
             return False
 
     def count(self) -> int:
@@ -180,6 +187,7 @@ class AtlasBackend(MemoryBackend):
             result = collection.get()
             return len(result["ids"]) if result["ids"] else 0
         except Exception:
+            logger.exception("AtlasBackend.count failed")
             return 0
 
     def gc(self, before_timestamp: str) -> int:
@@ -187,6 +195,7 @@ class AtlasBackend(MemoryBackend):
         try:
             result = collection.get(include=["metadatas"])
         except Exception:
+            logger.exception("AtlasBackend.gc failed getting collections")
             return 0
         if not result["ids"]:
             return 0
@@ -206,4 +215,5 @@ class AtlasBackend(MemoryBackend):
             collection.delete(ids=to_delete)
             return len(to_delete)
         except Exception:
+            logger.exception("AtlasBackend.gc failed deleting stale entries")
             return 0

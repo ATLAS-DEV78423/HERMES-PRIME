@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _IDENTITY_FILE = "identity.json"
 
@@ -69,7 +72,7 @@ class AgentIdentity:
                         if content:
                             lines.append(f"- {content}")
             except Exception:
-                pass
+                logger.exception("Agent failed to recall memory context")
         lines.append(
             "\nYou can use tools to search the web, execute commands, and manage tasks."
         )

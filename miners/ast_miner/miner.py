@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import logging
 import re
 import time
 from dataclasses import dataclass
@@ -14,6 +15,8 @@ from hermes_prime.signing import HMACSigner
 from hermes_prime.utils import hash_struct, new_urn_uuid, read_text_safe, utc_now_iso
 from infrastructure.backends import BackendRegistry
 from infrastructure.trust_store import TrustStore
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -242,6 +245,7 @@ class AstMiner:
             import tree_sitter_python as tspython  # type: ignore
             import tree_sitter_typescript as tstypescript  # type: ignore
         except Exception:
+            logger.warning("Tree-sitter backend failed to load")
             return None
 
         parser_factories = {
@@ -262,6 +266,7 @@ class AstMiner:
                     parser.set_language(language)
                 parsers[lang_name] = parser
             except Exception:
+                logger.warning("Failed to load parser language, skipping")
                 continue
         if not parsers:
             return None

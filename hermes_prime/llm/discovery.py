@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
 from .client import LLMClient
 from .rate_limiter import RateLimitConfig
 from .rate_limited_client import RateLimitedClient
+
+logger = logging.getLogger(__name__)
 
 _ProviderFactory = Callable[[dict[str, Any]], LLMClient | None]
 
@@ -54,6 +57,7 @@ def _ollama(cfg: dict[str, Any]) -> LLMClient | None:
         base_url = cfg.get("ollama_url", "http://localhost:11434")
         return OllamaClient(base_url=base_url)
     except Exception:
+        logger.exception("LLM discovery failed to create Ollama client")
         return None
 
 
@@ -64,6 +68,7 @@ def _vllm(cfg: dict[str, Any]) -> LLMClient | None:
         base_url = cfg.get("vllm_url", "http://localhost:8000")
         return VLLMClient(base_url=base_url)
     except Exception:
+        logger.exception("LLM discovery failed to create vLLM client")
         return None
 
 

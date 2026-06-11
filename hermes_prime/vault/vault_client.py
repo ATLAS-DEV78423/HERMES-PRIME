@@ -74,6 +74,7 @@ class VaultClient:
         try:
             return self._client.is_authenticated()
         except Exception:
+            logger.exception("VaultClient.available check failed")
             return False
 
     @property
@@ -83,6 +84,7 @@ class VaultClient:
         try:
             return self._client.is_sealed()
         except Exception:
+            logger.exception("VaultClient.sealed check failed")
             return True
 
     def read(self, path: str, key: str | None = None) -> VaultSecret | None:
@@ -151,6 +153,7 @@ class VaultClient:
             )
             return result.get("data", {}).get("keys", [])
         except Exception:
+            logger.exception("VaultClient.list_paths failed for path %s", path)
             return []
 
     def health(self) -> dict[str, Any]:

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from hermes_prime.brain.neural_graph import NeuralGraph, BrainNode, NodeType
 from hermes_prime.brain.linker import AutoLinker
+
+logger = logging.getLogger(__name__)
 
 
 class BrainMaintenanceAgent:
@@ -86,7 +89,7 @@ class BrainMaintenanceAgent:
                 try:
                     self.graph.delete_node(node.node_id)
                 except Exception:
-                    pass
+                    logger.warning("BrainMaintainer failed to prune node %s", node.node_id)
             pruned += 1
         return pruned
 
@@ -142,7 +145,7 @@ class BrainMaintenanceAgent:
                         visited.add(remove_id)
                         merged += 1
                     except Exception:
-                        pass
+                        logger.warning("BrainMaintainer failed to merge duplicate node pair")
             visited.add(a.node_id)
 
         return merged
@@ -176,7 +179,7 @@ class BrainMaintenanceAgent:
                         c.execute("DELETE FROM brain_edges WHERE edge_id = ?", (edge.edge_id,))
                         c.commit()
                     except Exception:
-                        pass
+                        logger.warning("BrainMaintainer failed to prune dead edge at %s", edge.edge_id)
                 continue
             if edge.weight < 0.1:
                 pruned += 1
@@ -186,7 +189,7 @@ class BrainMaintenanceAgent:
                         c.execute("DELETE FROM brain_edges WHERE edge_id = ?", (edge.edge_id,))
                         c.commit()
                     except Exception:
-                        pass
+                        logger.warning("BrainMaintainer failed to prune dead edge")
         return pruned
 
     def _compute_similarity(self, a: BrainNode, b: BrainNode) -> float:

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import Generator
 
 import requests
 
 from .client import LLMClient, LLMRequest, LLMResponse
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaClient(LLMClient):
@@ -22,6 +25,7 @@ class OllamaClient(LLMClient):
             response = self.session.get(f"{self.base_url}/api/tags", timeout=5)
             return response.status_code == 200
         except Exception:
+            logger.exception("OllamaClient health_check failed")
             return False
 
     def list_models(self) -> list[str]:
@@ -33,6 +37,7 @@ class OllamaClient(LLMClient):
             data = response.json()
             return [model["name"] for model in data.get("models", [])]
         except Exception:
+            logger.exception("OllamaClient list_models failed")
             return []
 
     def infer(self, request: LLMRequest) -> LLMResponse:
@@ -77,6 +82,7 @@ class OllamaClient(LLMClient):
                 latency_ms=(time.time() - start_time) * 1000,
             )
         except Exception:
+            logger.exception("OllamaClient infer failed")
             return LLMResponse(
                 model=request.model,
                 message_content="",

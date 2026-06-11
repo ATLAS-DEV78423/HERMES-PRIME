@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 import re
 from pathlib import Path
 
 from hermes_prime.contracts import MemoryClaim, MemoryTier, TrustState
 from hermes_prime.memory.base import MemoryBackend, MemorySearchResult
 from hermes_prime.utils import utc_now_iso
+
+logger = logging.getLogger(__name__)
 
 _ENTITY_BOOST_WEIGHT = 0.5
 _DEFAULT_CHROMA_PATH = Path.cwd() / ".hermes-prime" / "mem0_chroma"
@@ -194,6 +197,7 @@ class Mem0Backend(MemoryBackend):
         try:
             result = mem_coll.get(ids=[fact_id], include=["documents", "metadatas"])
         except Exception:
+            logger.exception("Mem0Backend.get failed for key %s", fact_id)
             return None
         if not result or not result.get("ids") or not result["ids"]:
             return None
@@ -209,6 +213,7 @@ class Mem0Backend(MemoryBackend):
                 include=["documents", "metadatas", "distances"],
             )
         except Exception:
+            logger.exception("Mem0Backend.search failed for query %s", query)
             return []
 
         if not results or not results.get("ids") or not results["ids"][0]:
@@ -238,6 +243,7 @@ class Mem0Backend(MemoryBackend):
                                     fid.strip() for fid in linked.split(",") if fid.strip()
                                 )
                 except Exception:
+                    logger.exception("Mem0Backend.search entity query failed")
                     continue
 
         output: list[MemorySearchResult] = []
@@ -291,6 +297,7 @@ class Mem0Backend(MemoryBackend):
         try:
             result = mem_coll.get(include=["documents", "metadatas"])
         except Exception:
+            logger.exception("Mem0Backend.list_all failed")
             return []
         if not result or not result.get("ids"):
             return []
@@ -309,6 +316,7 @@ class Mem0Backend(MemoryBackend):
             self._cleanup_entity_links(ent_coll, fact_id)
             return True
         except Exception:
+            logger.exception("Mem0Backend.delete failed for key %s", fact_id)
             return False
 
     def count(self) -> int:
@@ -317,6 +325,7 @@ class Mem0Backend(MemoryBackend):
             result = mem_coll.get()
             return len(result["ids"]) if result and result.get("ids") else 0
         except Exception:
+            logger.exception("Mem0Backend.count failed")
             return 0
 
     def gc(self, before_timestamp: str) -> int:
@@ -337,6 +346,7 @@ class Mem0Backend(MemoryBackend):
                     self._cleanup_entity_links(ent_coll, fid)
             return len(to_delete)
         except Exception:
+            logger.exception("Mem0Backend.gc failed")
             return 0
 
     def _cleanup_entity_links(self, ent_coll, fact_id: str) -> None:
@@ -359,7 +369,7 @@ class Mem0Backend(MemoryBackend):
                     else:
                         ent_coll.delete(ids=[eid])
         except Exception:
-            pass
+            logger.warning("Mem0Backend._cleanup_entity_links failed")
 
     def _claim_from_result(self, result: dict, index: int) -> MemoryClaim:
         doc = (

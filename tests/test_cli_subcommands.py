@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+from copy import deepcopy
 from pathlib import Path
 from unittest.mock import patch
 import pytest
@@ -10,12 +11,16 @@ import pytest
 # ── Parser-level tests ──────────────────────────────────────────────
 
 def _get_parser():
-    """Helper: build parser with mocked external/hermes-agent."""
+    """Helper: build parser without mutating sys.path permanently."""
     _fake_agent = Path(__file__).resolve().parent.parent / "external" / "hermes-agent"
-    if str(_fake_agent) not in sys.path:
-        sys.path.insert(0, str(_fake_agent))
-    from hermes_prime.cli import build_parser
-    return build_parser()
+    old_path = deepcopy(sys.path)
+    try:
+        if str(_fake_agent) not in sys.path:
+            sys.path.insert(0, str(_fake_agent))
+        from hermes_prime.cli import build_parser
+        return build_parser()
+    finally:
+        sys.path[:] = old_path
 
 
 class TestSubcommandRegistrations:
@@ -34,12 +39,6 @@ class TestSubcommandRegistrations:
         help_text = parser.format_help()
         for cmd in sorted(self.KNOWN_COMMANDS):
             assert cmd in help_text, f"Subcommand '{cmd}' missing from help"
-
-    def test_no_unknown_subcommands_leak(self):
-        parser = _get_parser()
-        help_text = parser.format_help()
-        for cmd in sorted(self.KNOWN_COMMANDS):
-            assert cmd in help_text
 
 
 class TestSubcommandHelp:
@@ -67,12 +66,10 @@ class TestSubcommandErrorHandling:
         assert exc.value.code == 2
 
     def test_missing_required_args_shows_error(self):
-        parser = _get_parser()
-        for cmd in ["mint"]:
-            try:
-                args = parser.parse_args([cmd])
-            except SystemExit:
-                pass
+        with pytest.raises(SystemExit) as exc:
+            from hermes_prime.cli import build_parser
+            build_parser().parse_args(["mint"])
+        assert exc.value.code == 2
 
 
 class TestSubcommandArgStructure:
@@ -87,11 +84,10 @@ class TestSubcommandArgStructure:
 
     @pytest.mark.parametrize("cmd", sorted(TestSubcommandRegistrations.KNOWN_COMMANDS))
     def test_each_cmd_accepts_help(self, cmd):
-        parser = _get_parser()
-        try:
-            args = parser.parse_args([cmd, "--help"])
-        except SystemExit:
-            pass
+        with pytest.raises(SystemExit) as exc:
+            parser = _get_parser()
+            parser.parse_args([cmd, "--help"])
+        assert exc.value.code == 0
 
 
 # ── Smoke tests for high-risk paths ──────────────────────────────
@@ -125,8 +121,8 @@ class TestMainEntry:
             main(["--help"])
         assert exc.value.code == 0
 
-    def test_main_runs_with_unknown_and_falls_through(self):
-        from hermes_prime.cli import main
-        with patch("hermes_cli.main.main", return_value=1):
-            result = main([])
-        assert result != 0
+    def test_main_runs_with_unknown_and_exits(self):
+        with pytest.raises(SystemExit) as exc:
+            from hermes_prime.cli import main
+            main(["nonexistent-cmd"])
+        assert exc.value.code == 2
